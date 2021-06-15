@@ -15,7 +15,7 @@ setup(
     long_description_content_type='text/markdown',
 
     version='1.0.0',
-    py_modules=['semantic-model'],
+    py_modules=['semantic_model'],
     license='MIT',
 
     url='https://github.com/Attumm/semantic-model',
