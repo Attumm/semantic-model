@@ -4,8 +4,8 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-from main import run_detail, run_list, InvalidModel, get_by_dn, yield_by_dn
-from main import run_nodes, iter_by_key
+from semantic_model import run_detail, run_list, InvalidModel, get_by_dn, yield_by_dn
+from semantic_model import run_nodes, iter_by_key
 
 
 class TestBasics(unittest.TestCase):
@@ -75,19 +75,23 @@ class TestBasics(unittest.TestCase):
         dsm_model = {
             "type": "list",
             "source": {"type": "loop_over", "source": "input", "dn": ""},
-            "items": [
-                {
-                    "title": "timestamp",
-                    "type": "string",
-                    "source": {"type": "index", "index": 0},
-                },
-                {
-                    "title": "counter",
-                    "type": "string",
-                    "field_type": "float",
-                    "source": {"type": "index", "index": 1},
-                }
-            ]
+            "item": {
+                "type": "list",
+                "items": [
+                    {
+                        "title": "timestamp",
+                        "type": "string",
+                        "source": {"type": "index", "index": 0},
+                    },
+                    {
+                        "title": "counter",
+                        "type": "string",
+                        "field_type": "float",
+                        "source": {"type": "index", "index": 1},
+                    }
+                ]
+            }
+
         }
         result = run_detail(dsm_model, input=input_data)
         self.assertEqual(result, expected)
