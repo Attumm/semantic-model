@@ -50,8 +50,8 @@ def looper(data, title=None, toplevel=True):
 
     if type_ not in ITERABLES:
         identified = identify(str(data))
-        result["example"] = str(data)[:40]
-        result["description"] = f"This looks like a {identified}" if identified else ""
+        result["example"] = str(data)[:50]
+        result["description"] = DESCRIPTION.get(identified, "")
         if identified in TYPE_FIELD:
             result["field_type"] = TYPE_FIELD[identified]
 
@@ -82,5 +82,6 @@ def looper(data, title=None, toplevel=True):
 
 if __name__ == "__main__":
     REGEX = json.load(open("regexes.json"))
+    DESCRIPTION = json.load(open("description.json"))
     result = looper(json.load(sys.stdin))
     print(json.dumps(result, indent=2))
