@@ -5,8 +5,7 @@ DEBUG_MODE = False
 
 
 STORAGE = {
-    "input": {},
-    "context_data": {},
+    "input": {}, "context_data": {},
 }
 
 ITEMS = {
@@ -86,9 +85,16 @@ def run_detail(model, role=None, **input_data):
     return full_detail(model, role=role, storage=STORAGE)
 
 
-def json_key(gather_args, model, dn_parent, storage):
-    data = storage["input"][gather_args[KEY_GATHER]]
+def get_data(gather_args, model, dn_parent, storage):
+    if KEY_GATHER not in gather_args:
+        data = storage["context_data"]
+    else:
+        data = storage["input"][gather_args[KEY_GATHER]]
+    return data
 
+
+def json_key(gather_args, model, dn_parent, storage):
+    data = get_data(gather_args, model, dn_parent, storage)
     if gather_args["dn"] not in data:
         return gather_args.get("default")
 
@@ -99,11 +105,21 @@ def json_key(gather_args, model, dn_parent, storage):
 
 
 def json_key_item(gather_args, model, dn_parent, storage):
-    data = storage["input"][gather_args[KEY_GATHER]]
+    data = get_data(gather_args, model, dn_parent, storage)
     try:
         return data[gather_args["dn"]]
     except KeyError:
-        return gather_args.get("default")
+        if "default" in gather_args:
+            return gather_args.get("default")
+        raise InvalidModel(f"Missing data and default for source {model['source']['type']} with dn {dn_parent}")
+
+
+def dn_lookup_loop(gather_args, model, dn_parent, storage):
+    dn = gather_args["dn"]
+
+    data = get_data(gather_args, model, dn_parent, storage)
+    for i in yield_by_dn(data, dn):
+        yield i
 
 
 def dn_lookup(gather_args, model, dn_parent, storage):
@@ -121,10 +137,7 @@ def dn_lookup(gather_args, model, dn_parent, storage):
 
 
 def get_from_source(gather_args, model, dn_parent, storage):
-    if KEY_GATHER not in gather_args:
-        data = storage["context_data"]
-    else:
-        data = storage["input"][gather_args[KEY_GATHER]]
+    data = get_data(gather_args, model, dn_parent, storage)
 
     dn = gather_args["path_to_target"] or gather_args["dn"]
     found, result = get_by_dn(data, dn)
@@ -141,26 +154,12 @@ def key_lookup(gather_args, model, dn_parent, storage):
 
 
 def loop_over(gather_args, model, dn_parent, storage):
-    if KEY_GATHER not in gather_args:
-        data = storage["context_data"]
-    else:
-        data = storage["input"][gather_args[KEY_GATHER]]
-    #found, index = get_by_dn(data, gather_args["dn"])
-   # print('_-----------------_')
-    #print(gather_args)
-    #print('_-----------------_')
-    #if found:
-    #    yield from index
-    #else:
-    #    yield from []
+    data = get_data(gather_args, model, dn_parent, storage)
     yield from data
 
 
 def index(gather_args, model, dn_parent, storage):
-    if KEY_GATHER not in gather_args:
-        data = storage["context_data"]
-    else:
-        data = storage["input"][gather_args[KEY_GATHER]]
+    data = get_data(gather_args, model, dn_parent, storage)
     return data[gather_args["index"]]
 
 
@@ -199,7 +198,11 @@ def get_by_dn(data_source, dn):
 
 
 def yield_by_dn(data_source, dn):
-    yield from get_by_dn(data_source, dn)
+    found, index = get_by_dn(data_source, dn)
+    if found:
+        yield from index
+    else:
+        yield from []
 
 
 def iter_by_key(gather_args, model, dn_parent, storage):
@@ -231,6 +234,7 @@ def iter_by_key(gather_args, model, dn_parent, storage):
     # loop over ids and join the fields
     for index, id_ in enumerate(ids):
         yield {item: buffer.get(item, {}).get(id_) for item in  items}
+
 
 def iter_by_prop(gather_args, model, dn_parent, storage):
     # setup args
@@ -298,11 +302,18 @@ def iter_by_prop2(gather_args, model, dn_parent, storage):
 def return_value(gather_args, model, dn_parent, storage):
     return gather_args["value"]
 
+def yield_from(gather_args, model, dn_parent, storage):
+    if "index" in gather_args:
+        return storage["context_data"][gather_args["index"]]
+    return storage["context_data"]
+
+
 
 SOURCE_FUNC = {
     "json_key": json_key,
     "json_key_item": json_key_item,
     "dn_lookup": dn_lookup,
+    "dn_lookup_loop": dn_lookup_loop,
     "key_lookup": key_lookup,
     "iter_by_key": iter_by_key,
     "iter_by_prop": iter_by_prop,
@@ -312,6 +323,7 @@ SOURCE_FUNC = {
     "return_value": return_value,
     "get_from_source": get_from_source,
     "get_from_input_file": get_from_source,
+    "yield": yield_from,
 }
 
 
@@ -347,7 +359,6 @@ def int_to_iso_timestamp(item, **kwargs):
         else:
             raise
     return result
-
 
 
 def regex_to_iso_timestamp(item, **kwargs):
@@ -405,7 +416,7 @@ def gather_items(model, dn, storage):
     try:
         source = model[KEY_GATHER]
     except KeyError:
-        #raise InvalidModel(f"Missing 'source' on dn {dn}")
+        raise InvalidModel(f"Missing 'source' on dn {dn}")
         return []
 
     gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
@@ -467,15 +478,18 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
                     sub_item = init_item(sub_model, dn)
                     # TODO apply "item" logic
                     item.append(result)
+
         elif "items" in model:
             for result in gather_items(model, dn, storage=storage):
                 p = []
                 for i, sub_model in enumerate(model["items"]):
                     if has_read_rights(sub_model, role):
                         sub_item = init_item(sub_model, dn)
-                        # TODO apply "item" logic
                         storage["context_data"] = result
+
                         result_i = gather_item(sub_model, dn, storage=storage)
+                        # TODO apply "item" logic, and tests
+                        #result_i = full_detail(sub_model, dn+("[]",), context_data=result, role=role, storage=storage)
                         p.append(result_i)
 
                 item.append(p)
@@ -499,7 +513,7 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
 
 
 def list_item(model, dn, value):
-    a =  {
+    item =  {
         "value": value,
         "dn": dn,
         "title": model.get("title"),
@@ -507,23 +521,23 @@ def list_item(model, dn, value):
         "type": model["type"],
         "field_type": model.get("field_type"),
     }
-    a.update(STORAGE[KEY_STORAGE_LIST_ITEM])
-    return a
+    item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
+    return item
 
 def list_node(model, dn, value):
-    a =  {
+    item =  {
         "_dn": dn,
         "_title": model.get("title"),
         "_description": model.get("description"),
         "_type": model["type"],
         "_field_type": model.get("field_type"),
     }
-    a.update(STORAGE[KEY_STORAGE_LIST_ITEM])
+    item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
     if type(value) == dict:
-        a.update(value)
+        item.update(value)
     else:
-        a["value"] = value
-    return a
+        item["value"] = value
+    return item
 
 
 def list_items(model, dn=(), context_data=None, role=None, storage=None):
@@ -635,7 +649,6 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
         yield list_node(model=model, dn=dn, value=result)
 
 
-
 def list_item_config(model, dn):
     if "list_item" in model:
         return model["list_item"]
@@ -668,7 +681,6 @@ def run_nodes(model, role=None, **input_data):
         STORAGE[KEY_STORAGE_LIST_ITEM] = {f"common_{key}": val for key, val in common_fields.items()}
 
     return list_nodes(model, role=role, storage=STORAGE)
-
 
 
 def rbac_views(l):

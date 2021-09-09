@@ -2,6 +2,8 @@ import re
 import sys
 import json
 
+# I like vanilla python, for some reason parser like the request liberary could be installed already.
+# If it's not installed we will just skip it.
 try:
     from dateutil import parser
 except Exception:
@@ -9,6 +11,9 @@ except Exception:
         pass
     parser = A()
     parser.parse = lambda x: False
+
+class Skip(Exception):
+    pass
 
 NESTED = "nested"
 ITERABLES = ["list", "dict"]
@@ -25,9 +30,16 @@ TYPE_FIELD = {
     "Latitude & Longitude Coordinates": "geopoint",
 }
 
+data_dir = "data"
+DATA = {}
+DATA["regex"] =  json.load(open(f"{data_dir}/regexes.json"))
+DATA["description"] = json.load(open(f"{data_dir}/description.json"))
+
+CONFIG = {}
+
 
 def identify(item):
-    for name, regex in REGEX.items():
+    for name, regex in DATA["regex"].items():
         if re.match(regex, item):
             return name
         try:
@@ -41,38 +53,107 @@ def str_type(item):
     return str(type(item).__name__)
 
 
-def looper(data, title=None, toplevel=True):
+def get_description(identified):
+    if CONFIG.get("skip_description"):
+        return ""
+    return DATA["description"].get(identified, "")
+
+
+def create_source(data, result, dn, has_context_data):
+    if result["type"] == "list":
+        types_found = {str_type(v): i for i, v in enumerate(data)}
+        if len(types_found) == 1:
+            if "dict" in types_found:
+                return {"type": "dn_lookup_loop", "source": "input", "dn": dn}
+            else:
+                return {"type": "dn_lookup_loop", "source": "input", "dn": dn}
+        else:
+            return {"type": "dn_lookup_loop", "source": "input", "dn": dn}
+
+    elif dn[-1] == "]":
+        if dn[-2].isdigit():
+            return {"type": "yield", "index": dn.split(".")[-1][1:-1]} 
+        else:
+            return {"type": "yield"}
+
+    elif result["type"] in ["string", "int"]:
+        if has_context_data:
+            return {"type": "json_key_item", "dn": dn.split(".")[-1]}
+        else:
+            return {"type": "json_key_item", "source": "input", "dn": dn}
+    else:
+        return {}
+
+def create_dn(dn, title, index=None):
+    if dn == "":
+        return title
+
+    if index != None:
+        return f"{dn}.[{index}]"
+
+    return f"{dn}.{title}"
+
+
+def create_dn_list(title, dn, index=None):
+    result = "[]" if index is None else f"[{index}]"
+
+    if title is not None:
+        result = f"{title}.{result}"
+    if dn:
+        result = f"{dn}.{result}"
+    return result
+
+    
+
+def looper(data, title=None, dn="", has_context_data=False):
     type_ = str_type(data)
     type_ = TYPE_TRANSLATE.get(type_, type_)
     result = {}
     if title is not None:
         result["title"] = " ".join(i.capitalize() for i in title.replace("_", " ").split(" "))
+    
+    result["type"] =  type_
+    if not CONFIG.get("skip_source") and dn:
+        try:
+            result["source"] = create_source(data, result, dn, has_context_data) 
+        except Skip:
+            print("skipped", dn)
+            pass
 
     if type_ not in ITERABLES:
         identified = identify(str(data))
-        result["example"] = str(data)[:50]
-        result["description"] = DESCRIPTION.get(identified, "")
         if identified in TYPE_FIELD:
             result["field_type"] = TYPE_FIELD[identified]
 
-    result["type"] =  type_
-    if type_ == "dict":
+        result["example"] = str(data)[:50]
+        result["description"] = get_description(identified)
+
+    elif type_ == "dict":
         nested_result = {}
         result["nested"] = nested_result
         for k, v in data.items():
-            nested_result[k] = looper(v, title=k, toplevel=False)
+            nested_result[k] = looper(v, title=k, dn=create_dn(dn, k))
 
     elif type_ == "list":
         types_found = {str_type(v): i for i, v in enumerate(data)}
-        if len(types_found) == 1:
-            type_found = list(types_found.keys())[0]
-            result["item"] = looper(data[0], toplevel=False)
+        if len(types_found) == 1 :
+            if "dict" in types_found:
+                nested_result = {}
+                result["nested"] = nested_result
+                for k, v in data[0].items():
+                    nested_result[k] = looper(v, title=k, dn=create_dn(dn, k), has_context_data=True)
+            else:
+                type_found = list(types_found.keys())[0]
+                result["item"] = looper(data[0], dn=create_dn_list(result.get("title"), dn))
+
         else:
             result["items"] = []
             for type_found, index in types_found.items():
                 if type_found not in ITERABLES:
-                    r = looper(data[index], toplevel=False)
+                    r = looper(data[index], dn=create_dn_list(result.get("title"), dn, index))
                     result["items"].append(r)
+                else:
+                    raise Exception
 
     else:
         pass
@@ -81,7 +162,5 @@ def looper(data, title=None, toplevel=True):
 
 
 if __name__ == "__main__":
-    REGEX = json.load(open("regexes.json"))
-    DESCRIPTION = json.load(open("description.json"))
     result = looper(json.load(sys.stdin))
     print(json.dumps(result, indent=2))

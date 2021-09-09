@@ -265,7 +265,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"read": True},
                     },
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -303,7 +303,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"read": True},
                     },  # rbac, is only for full ###
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -316,7 +316,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"read": True},
                     },
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -355,7 +355,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"update": True},
                     },  # rbac, is only for full ###
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -368,7 +368,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"update": True},
                     },
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -412,7 +412,7 @@ class TestBasics(unittest.TestCase):
                     "rbac": {
                         "full": {"read": True},
                     }, # rbac, is only for full
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -429,7 +429,7 @@ class TestBasics(unittest.TestCase):
                         "full": {"read": True},
                         "restricted": {"read": True}
                     },
-                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
                     "item": {
                         "type": "string",
@@ -1714,7 +1714,6 @@ class TestBasicsSources(unittest.TestCase):
 
     def test_basic_dn_nested_list_second_item_nested_yield(self):
         expected = ["find me", "find me two", "find me three"]
-        expected_found = True
         input_data = {
             "top": {
                 "lower": {
@@ -1727,9 +1726,8 @@ class TestBasicsSources(unittest.TestCase):
             }
         }
         dn = "top.lower.list_with_items"
-        found_result, result = list(yield_by_dn(input_data, dn))
+        result = list(yield_by_dn(input_data, dn))
         self.assertEqual(result, expected)
-        self.assertEqual(found_result, expected_found)
 
     def test_iter_sources(self):
         input_data = [
