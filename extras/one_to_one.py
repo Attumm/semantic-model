@@ -105,7 +105,7 @@ def create_dn_list(title, dn, index=None):
 
     
 
-def looper(data, title=None, dn="", has_context_data=False):
+def one_to_one_looper(data, title=None, dn="", has_context_data=False):
     type_ = str_type(data)
     type_ = TYPE_TRANSLATE.get(type_, type_)
     result = {}
@@ -132,7 +132,7 @@ def looper(data, title=None, dn="", has_context_data=False):
         nested_result = {}
         result["nested"] = nested_result
         for k, v in data.items():
-            nested_result[k] = looper(v, title=k, dn=create_dn(dn, k))
+            nested_result[k] = one_to_one_looper(v, title=k, dn=create_dn(dn, k))
 
     elif type_ == "list":
         types_found = {str_type(v): i for i, v in enumerate(data)}
@@ -141,16 +141,16 @@ def looper(data, title=None, dn="", has_context_data=False):
                 nested_result = {}
                 result["nested"] = nested_result
                 for k, v in data[0].items():
-                    nested_result[k] = looper(v, title=k, dn=create_dn(dn, k), has_context_data=True)
+                    nested_result[k] = one_to_one_looper(v, title=k, dn=create_dn(dn, k), has_context_data=True)
             else:
                 type_found = list(types_found.keys())[0]
-                result["item"] = looper(data[0], dn=create_dn_list(result.get("title"), dn))
+                result["item"] = one_to_one_looper(data[0], dn=create_dn_list(result.get("title"), dn))
 
         else:
             result["items"] = []
             for type_found, index in types_found.items():
                 if type_found not in ITERABLES:
-                    r = looper(data[index], dn=create_dn_list(result.get("title"), dn, index))
+                    r = one_to_one_looper(data[index], dn=create_dn_list(result.get("title"), dn, index))
                     result["items"].append(r)
                 else:
                     raise Exception
@@ -161,6 +161,11 @@ def looper(data, title=None, dn="", has_context_data=False):
     return result
 
 
+def run_one_to_one(sm_model_path, input_file):
+    return one_to_one_looper(json.load(input_file))
+
+
 if __name__ == "__main__":
-    result = looper(json.load(sys.stdin))
+    result = one_to_one_looper(json.load(sys.stdin))
+
     print(json.dumps(result, indent=2))

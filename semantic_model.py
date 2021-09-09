@@ -729,17 +729,42 @@ ACTIONS = {
 }
 
 
-if __name__ == "__main__":
-    #input_model = json.load(open("inputs/dds/lb/example_input_LB_F5_2.json"))
-    #dsm_model = json.load(open("dds/models/dds/lb/dsm_LB_F5_2_rbac1.json"))
+def run_semantic_model(sm_model_path, input_file):
+    return run_detail_json(sm_path, input=input_path)
 
-    #result = dsm_looper(update_views_to_rbac, dsm_model)
-    #esult = dsm_looper(remove_list_item, dsm_model)
-    input_path = "inputs/dds/lb/example_input_LB_F5_2.json"
-    dsm_path = "dds/models/dds/lb/dsm_LB_F5_2_rbac1.json"
-    #result = run_detail_json(dsm_model, input=input_model)
-    result = run_detail_json(dsm_path, input=input_path)
-    #rint(json.dumps(result, indent=2))
-    print(result)
-    #list_item_data(dsm_model)
-    #print(list_item_config)
+
+CLI = {
+    "default": run_detail_json,
+    "greg": run_one_to_one,
+    "one_to_one": run_one_to_one,
+}
+
+
+def pjson(result)
+    print(json.dumps(result, indent=4))
+
+
+OUTPUT = {
+    "pjson": result,
+    "json": json.dumps
+}
+
+if __name__ == "__main__":
+    from extras.one_to_one import run_one_to_one
+
+    mode = sys.argv[sys.argv.index('-mode')+1] if '-mode' in sys.argv else "default"
+    dsm_model_path = sys.argv[sys.argv.index('-dsm')+1] if '-dsm' in sys.argv else ""
+    input_file = sys.argv[sys.argv.index('-input')+1] if '-input' in sys.argv else ""
+    output = sys.argv[sys.argv.index('-output')+1] if '-output' in sys.argv else "pjson"
+
+    try:
+        run_mode = CLI[mode]
+    except KeyError:
+        print(f"{mode} not in valid mode options: {list(CLI.keys)}")
+
+    result = run_mode(sm_model_path, input_path)
+
+    try:
+        OUTPUT[output](result)
+    except KeyError:
+        print(f"{output} not in valid output options: {list(OUTPUT.keys)}")
