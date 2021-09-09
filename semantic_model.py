@@ -728,14 +728,41 @@ def run_semantic_model(sm_model_path, input_file):
     return run_detail_json(sm_model_path, input=input_file)
 
 
+def run_semantic_list_model(sm_model_path, input_file):
+    return run_list_json(sm_model_path, input=input_file)
+
+
+def run_semantic_nodes_model(sm_model_path, input_file):
+    return run_nodes_json(sm_model_path, input=input_file)
+
+
+def explain(*args, **kwargs):
+    print("*** Explain ***\n")
+    print("Create for initial model:")
+    print("python3 -m semantic_model -mode one_to_one -input example.json > sm_model.json")
+    print("")
+    print("Run model with just created model and example_data")
+    print("python3 -m semantic_model -input example.json -sm sm_model.json")
+    print("")
+    print("Graph created model and create a png image")
+    print("sudo docker run -i attumm/dsm_png:lastest < sm_model.json > output.png")
+    print("")
+
+
 CLI = {
-    "default": run_detail_json,
+    "default": run_semantic_model,
+    "detail": run_semantic_model,
+    "list": run_semantic_list_model,
+    "nodes": run_semantic_nodes_model,
     "greg": run_one_to_one,
     "one_to_one": run_one_to_one,
+    "help": explain,
 }
 
 
 def pjson(result):
+    if result is None:
+        return
     print(json.dumps(result, indent=4))
 
 

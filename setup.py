@@ -14,7 +14,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    version='1.4.0',
+    version='1.4.1',
     py_modules=['semantic_model'],
     license='MIT',
 

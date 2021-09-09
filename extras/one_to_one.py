@@ -50,6 +50,8 @@ def identify(item):
     return ""
 
 def str_type(item):
+    if item is None:
+        return "str"
     return str(type(item).__name__)
 
 
@@ -76,13 +78,14 @@ def create_source(data, result, dn, has_context_data):
         else:
             return {"type": "yield"}
 
-    elif result["type"] in ["string", "int"]:
+    elif result["type"] in ["string", "int", "bool", "float"]:
         if has_context_data:
             return {"type": "json_key_item", "dn": dn.split(".")[-1]}
         else:
             return {"type": "json_key_item", "source": "input", "dn": dn}
     else:
         return {}
+
 
 def create_dn(dn, title, index=None):
     if dn == "":
@@ -154,7 +157,6 @@ def one_to_one_looper(data, title=None, dn="", has_context_data=False):
                     result["items"].append(r)
                 else:
                     raise Exception
-
     else:
         pass
 
@@ -162,7 +164,7 @@ def one_to_one_looper(data, title=None, dn="", has_context_data=False):
 
 
 def run_one_to_one(sm_model_path, input_file):
-    return one_to_one_looper(json.load(input_file))
+    return one_to_one_looper(json.load(open(input_file)))
 
 
 if __name__ == "__main__":
