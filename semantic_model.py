@@ -1,6 +1,10 @@
-import json
-import datetime
 import re
+import json
+import sys
+import datetime
+
+from extras.one_to_one import run_one_to_one
+
 DEBUG_MODE = False
 
 
@@ -77,8 +81,8 @@ def run_node_json(model_path, role=None, **input_path):
 
 
 def run_detail(model, role=None, **input_data):
-    ### setup connection to database
-    ### setup api credential
+    # setup connection to database
+    # setup api credential
     for k, v in input_data.items():
         STORAGE["input"][k] = v
 
@@ -123,7 +127,6 @@ def dn_lookup_loop(gather_args, model, dn_parent, storage):
 
 
 def dn_lookup(gather_args, model, dn_parent, storage):
-    dn = gather_args["dn"]
     data = storage["input"][gather_args[KEY_GATHER]]
 
     current_pointer = data
@@ -161,14 +164,6 @@ def loop_over(gather_args, model, dn_parent, storage):
 def index(gather_args, model, dn_parent, storage):
     data = get_data(gather_args, model, dn_parent, storage)
     return data[gather_args["index"]]
-
-
-def loop_by_dn_key(data_source, dn):
-    found, data = get_by_dn(data_source=input_data, dn=dn)
-    if found:
-        yield from data.keys()
-    else:
-        yield from []
 
 
 def is_list_dn(item):
@@ -233,7 +228,7 @@ def iter_by_key(gather_args, model, dn_parent, storage):
 
     # loop over ids and join the fields
     for index, id_ in enumerate(ids):
-        yield {item: buffer.get(item, {}).get(id_) for item in  items}
+        yield {item: buffer.get(item, {}).get(id_) for item in items}
 
 
 def iter_by_prop(gather_args, model, dn_parent, storage):
@@ -256,7 +251,7 @@ def iter_by_prop(gather_args, model, dn_parent, storage):
             data_found, data = get_by_dn(data_source=element_in_list, dn=dn_to_value)
             index_found, index = get_by_dn(data_source=element_in_list, dn=dn_to_id)
             if index_found and data_found:
-                if not index in buffer:
+                if index not in buffer:
                     buffer[index] = {}
                 buffer[index][key] = data
 
@@ -291,7 +286,7 @@ def iter_by_prop2(gather_args, model, dn_parent, storage):
             data_found, data = get_by_dn(data_source=element_in_list, dn=dn_to_value)
             index_found, index = get_by_dn(data_source=element_in_list, dn=dn_to_id)
             if index_found and data_found:
-                if not index in buffer:
+                if index not in buffer:
                     buffer[index] = {}
                 buffer[index][key] = data
 
@@ -302,11 +297,11 @@ def iter_by_prop2(gather_args, model, dn_parent, storage):
 def return_value(gather_args, model, dn_parent, storage):
     return gather_args["value"]
 
+
 def yield_from(gather_args, model, dn_parent, storage):
     if "index" in gather_args:
         return storage["context_data"][gather_args["index"]]
     return storage["context_data"]
-
 
 
 SOURCE_FUNC = {
@@ -406,10 +401,10 @@ def get_func_args_from_source(source, dn):
     except KeyError:
         # TODO add below message to errors, to make more descriptive
         raise InvalidModel(
-            f"Missing post_format on {source_type} on source with dn {dn}, {postformat_name} not in available options {POST_FORMAT.keys()}"
+            f"Missing post_format on {source_type} on source with dn {dn}, {postformat_name} not in available options {POSTFORMAT.keys()}"
         )
 
-    return source_func, filter_func, {k: v for k, v in source.items() if k != "type" or k.startswith("filter_")}, source.get("filter_args", {}), postformat_func, postformat_args 
+    return source_func, filter_func, {k: v for k, v in source.items() if k != "type" or k.startswith("filter_")}, source.get("filter_args", {}), postformat_func, postformat_args
 
 
 def gather_items(model, dn, storage):
@@ -489,7 +484,7 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
 
                         result_i = gather_item(sub_model, dn, storage=storage)
                         # TODO apply "item" logic, and tests
-                        #result_i = full_detail(sub_model, dn+("[]",), context_data=result, role=role, storage=storage)
+                        # result_i = full_detail(sub_model, dn+("[]",), context_data=result, role=role, storage=storage)
                         p.append(result_i)
 
                 item.append(p)
@@ -511,9 +506,8 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
     return item
 
 
-
 def list_item(model, dn, value):
-    item =  {
+    item = {
         "value": value,
         "dn": dn,
         "title": model.get("title"),
@@ -524,8 +518,9 @@ def list_item(model, dn, value):
     item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
     return item
 
+
 def list_node(model, dn, value):
-    item =  {
+    item = {
         "_dn": dn,
         "_title": model.get("title"),
         "_description": model.get("description"),
@@ -565,8 +560,8 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
             for result in gather_items(model, dn, storage=storage):
                 for i, sub_model in enumerate(model["items"]):
                     if has_read_rights(sub_model, role):
+                        # TODO apply "sub_item" logic
                         sub_item = init_item(sub_model, dn)
-                        # TODO apply "item" logic
                         storage["context_data"] = result
                         result_i = gather_item(sub_model, dn, storage=storage)
                         yield list_item(sub_model, dn+("item",), result_i)
@@ -580,7 +575,7 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
                         yield from list_items(sub_model,  new_dn(dn, key), role=role, storage=storage)
         # return default or initil item
         else:
-            pass
+            yield item
 
     else:
         result = gather_item(model, dn, storage=storage)
@@ -588,7 +583,7 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
 
 
 def is_node(model):
-    return model["type"] in ["dict", "list"] and all("nested" not in sub_model for sub_model in  model["nested"].values())
+    return model["type"] in ["dict", "list"] and all("nested" not in sub_model for sub_model in model["nested"].values())
 
 
 def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
@@ -730,7 +725,7 @@ ACTIONS = {
 
 
 def run_semantic_model(sm_model_path, input_file):
-    return run_detail_json(sm_path, input=input_path)
+    return run_detail_json(sm_model_path, input=input_file)
 
 
 CLI = {
@@ -740,21 +735,19 @@ CLI = {
 }
 
 
-def pjson(result)
+def pjson(result):
     print(json.dumps(result, indent=4))
 
 
 OUTPUT = {
-    "pjson": result,
-    "json": json.dumps
+    "pjson": pjson,
 }
 
 if __name__ == "__main__":
-    from extras.one_to_one import run_one_to_one
 
     mode = sys.argv[sys.argv.index('-mode')+1] if '-mode' in sys.argv else "default"
-    dsm_model_path = sys.argv[sys.argv.index('-dsm')+1] if '-dsm' in sys.argv else ""
-    input_file = sys.argv[sys.argv.index('-input')+1] if '-input' in sys.argv else ""
+    sm_model_path = sys.argv[sys.argv.index('-sm')+1] if '-sm' in sys.argv else ""
+    input_path = sys.argv[sys.argv.index('-input')+1] if '-input' in sys.argv else ""
     output = sys.argv[sys.argv.index('-output')+1] if '-output' in sys.argv else "pjson"
 
     try:

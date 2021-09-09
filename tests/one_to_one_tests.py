@@ -6,7 +6,7 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../extras')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-from one_to_one import looper, CONFIG
+from one_to_one import one_to_one_looper, CONFIG
 
 from semantic_model import run_detail, run_list, InvalidModel, get_by_dn, yield_by_dn
 from semantic_model import run_nodes, iter_by_key
@@ -98,7 +98,7 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        result = looper(input_data)
+        result = one_to_one_looper(input_data)
         self.assertDictEqual(result, expected, test_output(result, expected))
 
     def test_basics_nested(self):
@@ -174,7 +174,7 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        result = looper(input_data)
+        result = one_to_one_looper(input_data)
         self.assertDictEqual(result, expected, test_output(result, expected))
 
 
@@ -215,7 +215,7 @@ class Testgather(unittest.TestCase):
             }
         }
 
-        dsm_model = looper(input_data)
+        dsm_model = one_to_one_looper(input_data)
         self.assertDictEqual(dsm_model, expected, test_output(dsm_model, expected))
         result = run_detail(dsm_model, input=input_data)
         self.assertDictEqual(result, input_data, test_output(result, input_data))
@@ -298,7 +298,7 @@ class Testgather(unittest.TestCase):
             }
         }
 
-        dsm_model = looper(input_data)
+        dsm_model = one_to_one_looper(input_data)
         self.assertDictEqual(dsm_model, expected, test_output(dsm_model, expected))
         result = run_detail(dsm_model, input=input_data)
         #result = run_detail(expected, input=input_data)
@@ -356,7 +356,7 @@ class TestgatherList(unittest.TestCase):
         }
 
 
-        result = looper(input_data)
+        result = one_to_one_looper(input_data)
         self.assertDictEqual(result, expected, test_output(result, expected))
 
     @unittest.skip("Should be added, but for now dictonary is always top level")
@@ -390,7 +390,7 @@ class TestgatherList(unittest.TestCase):
 
         print('-------------****------------')
 
-        dsm_model = looper(input_data)
+        dsm_model = one_to_one_looper(input_data)
         self.assertDictEqual(dsm_model, expected, test_output(dsm_model, expected))
         result = run_detail(dsm_model, input=input_data)
         self.assertDictEqual(result, input_data, test_output(result, input_data))
@@ -437,7 +437,7 @@ class TestgatherList(unittest.TestCase):
 
 
 
-        dsm_model = looper(input_data)
+        dsm_model = one_to_one_looper(input_data)
         self.assertDictEqual(dsm_model, expected, test_output(dsm_model, expected))
         dic_result = {"result": run_detail(dsm_model, input=input_data)}
         dic_input_data = {"result": input_data}
