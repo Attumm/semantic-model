@@ -15,7 +15,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    version='1.4.2',
+    version='1.4.4',
     py_modules=['semantic_model'],
     packages=find_packages('extras'),
     include_package_data=True,

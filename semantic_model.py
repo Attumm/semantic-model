@@ -761,7 +761,7 @@ OUTPUT = {
 }
 
 if __name__ == "__main__":
-    from extras.one_to_one import run_one_to_one
+    from one_to_one import run_one_to_one
     CLI = {
         "default": run_semantic_model,
         "detail": run_semantic_model,
