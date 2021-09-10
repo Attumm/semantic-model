@@ -15,9 +15,8 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    version='1.4.4',
-    py_modules=['semantic_model'],
-    packages=find_packages('extras'),
+    version='1.4.5',
+    py_modules=['semantic_model', 'one_to_one', 'data'],
     include_package_data=True,
     license='MIT',
 
