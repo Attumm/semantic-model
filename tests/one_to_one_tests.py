@@ -4,7 +4,7 @@ import json
 import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../extras')))
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 from one_to_one import one_to_one_looper, CONFIG
 

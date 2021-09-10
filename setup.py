@@ -1,6 +1,7 @@
 import io
 
 from setuptools import setup
+from setuptools import find_packages
 
 with io.open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -16,6 +17,8 @@ setup(
 
     version='1.4.1',
     py_modules=['semantic_model'],
+    packages=find_packages('extras'),
+    include_package_data=True,
     license='MIT',
 
     url='https://github.com/Attumm/semantic-model',

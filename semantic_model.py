@@ -3,7 +3,6 @@ import json
 import sys
 import datetime
 
-from extras.one_to_one import run_one_to_one
 
 DEBUG_MODE = False
 
@@ -749,15 +748,6 @@ def explain(*args, **kwargs):
     print("")
 
 
-CLI = {
-    "default": run_semantic_model,
-    "detail": run_semantic_model,
-    "list": run_semantic_list_model,
-    "nodes": run_semantic_nodes_model,
-    "greg": run_one_to_one,
-    "one_to_one": run_one_to_one,
-    "help": explain,
-}
 
 
 def pjson(result):
@@ -771,6 +761,16 @@ OUTPUT = {
 }
 
 if __name__ == "__main__":
+    from extras.one_to_one import run_one_to_one
+    CLI = {
+        "default": run_semantic_model,
+        "detail": run_semantic_model,
+        "list": run_semantic_list_model,
+        "nodes": run_semantic_nodes_model,
+        "greg": run_one_to_one,
+        "one_to_one": run_one_to_one,
+        "help": explain,
+    }
 
     mode = sys.argv[sys.argv.index('-mode')+1] if '-mode' in sys.argv else "default"
     sm_model_path = sys.argv[sys.argv.index('-sm')+1] if '-sm' in sys.argv else ""

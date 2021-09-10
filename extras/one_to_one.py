@@ -2,6 +2,8 @@ import re
 import sys
 import json
 
+from .data import regexes, descriptions
+
 # I like vanilla python, for some reason parser like the request liberary could be installed already.
 # If it's not installed we will just skip it.
 try:
@@ -32,8 +34,8 @@ TYPE_FIELD = {
 
 data_dir = "data"
 DATA = {}
-DATA["regex"] =  json.load(open(f"{data_dir}/regexes.json"))
-DATA["description"] = json.load(open(f"{data_dir}/description.json"))
+DATA["regex"] = regexes
+DATA["description"] = descriptions
 
 CONFIG = {}
 
@@ -106,7 +108,6 @@ def create_dn_list(title, dn, index=None):
         result = f"{dn}.{result}"
     return result
 
-    
 
 def one_to_one_looper(data, title=None, dn="", has_context_data=False):
     type_ = str_type(data)

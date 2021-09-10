@@ -6,7 +6,6 @@ The single source of truth about data in one model.
 ### Create initial sm model
 '''sh
 python3 -m semantic_model -mode one_to_one -input example.json > sm_model.json
-
 '''
 
 ### Run sm model
