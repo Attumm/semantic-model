@@ -3,6 +3,8 @@ import json
 import sys
 import datetime
 
+from settipy import settipy
+
 
 DEBUG_MODE = False
 
@@ -756,8 +758,23 @@ def pjson(result):
     print(json.dumps(result, indent=4))
 
 
+def json_(result):
+    if result is None:
+        return
+    print(json.dumps(result))
+
+
+def tofile(result):
+    if result is None:
+        return
+    with open("output.json", "w") as f:
+        json.dump(f, result)
+
+
 OUTPUT = {
     "pjson": pjson,
+    "json": json_,
+    "tofile": tofile,
 }
 
 if __name__ == "__main__":
@@ -772,10 +789,16 @@ if __name__ == "__main__":
         "help": explain,
     }
 
-    mode = sys.argv[sys.argv.index('-mode')+1] if '-mode' in sys.argv else "default"
-    sm_model_path = sys.argv[sys.argv.index('-sm')+1] if '-sm' in sys.argv else ""
-    input_path = sys.argv[sys.argv.index('-input')+1] if '-input' in sys.argv else ""
-    output = sys.argv[sys.argv.index('-output')+1] if '-output' in sys.argv else "pjson"
+    settipy.set("mode", "default", f"set the mode options: {CLI.keys()}")
+    settipy.set("sm", "", "path to sm model. example: ./sm.json")
+    settipy.set("input", "", "path to input json file. example: ./example.json")
+    settipy.set("output", "pjson", "path to input json file. options: {OUTPUT.keys()}")
+    settipy.parse()
+
+    mode = settipy.get("mode")
+    sm_model_path = settipy.get("sm")
+    input_path = settipy.get("input")
+    output = settipy.get("output")
 
     try:
         run_mode = CLI[mode]

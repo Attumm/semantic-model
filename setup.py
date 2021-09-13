@@ -15,8 +15,9 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    version='1.4.5',
+    version='1.6.0',
     py_modules=['semantic_model', 'one_to_one', 'data'],
+    install_requires=['settipy'],
     include_package_data=True,
     license='MIT',
 
