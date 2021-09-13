@@ -1,6 +1,6 @@
 import re
 import json
-import sys
+import uuid
 import datetime
 
 from settipy import settipy
@@ -13,6 +13,7 @@ STORAGE = {
     "input": {}, "context_data": {},
 }
 
+
 ITEMS = {
     "dict": dict,
     "list": list,
@@ -20,6 +21,7 @@ ITEMS = {
     "integer": int,
     "boolean": bool,
 }
+
 
 DEFAULT_TYPE = {
     "dict": dict,
@@ -370,11 +372,17 @@ def regex_search(item, **kwargs):
     return result.group(0)
 
 
+def create_uuid5(domain, id):
+    namespace = uuid.UUID(bytes=bytes(f"{domain}".ljust(16, "o").encode("ASCII")))
+    return str(uuid.uuid5(namespace, id))
+
+
 POSTFORMAT = {
     "default": default_postformat,
     "int_to_iso_timestamp": int_to_iso_timestamp,
     "regex_to_iso_timestamp": regex_to_iso_timestamp,
     "regex_search": regex_search,
+    "hash_uuid": create_uuid5,
 }
 
 
@@ -614,8 +622,8 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
                 sub_model = model["item"]
                 for result in gather_items(model, dn, storage=storage):
                     if has_read_rights(sub_model, role):
+                        # TODO apply "item" logic, and tests
                         sub_item = init_item(sub_model, dn)
-                        # TODO apply "item" logic
                         yield list_nodes(sub_model, dn+("item",), result)
 
             # list contains multiple single items
@@ -623,8 +631,8 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
                 for result in gather_items(model, dn, storage=storage):
                     for i, sub_model in enumerate(model["items"]):
                         if has_read_rights(sub_model, role):
+                            # TODO apply "item" logic, and tests
                             sub_item = init_item(sub_model, dn)
-                            # TODO apply "item" logic
                             storage["context_data"] = result
                             result_i = gather_item(sub_model, dn, storage=storage)
                             yield list_nodes(sub_model, dn+("item",), result_i)
@@ -679,8 +687,8 @@ def run_nodes(model, role=None, **input_data):
     return list_nodes(model, role=role, storage=STORAGE)
 
 
-def rbac_views(l):
-    return {i: {"read": True, "update": True, "create": True, "delete": True} for i in l}
+def rbac_views(items):
+    return {i: {"read": True, "update": True, "create": True, "delete": True} for i in items}
 
 
 def update_views_to_rbac(model, dn):
@@ -734,7 +742,7 @@ def run_semantic_list_model(sm_model_path, input_file):
 
 
 def run_semantic_nodes_model(sm_model_path, input_file):
-    return run_nodes_json(sm_model_path, input=input_file)
+    return run_node_json(sm_model_path, input=input_file)
 
 
 def explain(*args, **kwargs):
@@ -748,8 +756,6 @@ def explain(*args, **kwargs):
     print("Graph created model and create a png image")
     print("sudo docker run -i attumm/dsm_png:lastest < sm_model.json > output.png")
     print("")
-
-
 
 
 def pjson(result):
