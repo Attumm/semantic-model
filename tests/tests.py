@@ -1781,12 +1781,12 @@ class TestBasicsListItem(unittest.TestCase):
         }
 
         expected = [
-            {'value': 'interval 10', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 'item that is in the second place', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 'the third one, if you will', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 'Hi there', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 'Thinking of another generic string', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 'Last one boys', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None},
+            {'value': 'interval 10', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 'item that is in the second place', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 'the third one, if you will', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 'Hi there', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 'Thinking of another generic string', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 'Last one boys', 'dn': ('options', 'item'), 'title': None, 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
         ]
 
         dsm_model = {
@@ -1817,12 +1817,12 @@ class TestBasicsListItem(unittest.TestCase):
         }
 
         expected = [
-            {'value': 'interval 10', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
-            {'value': 'item that is in the second place', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
-            {'value': 'the third one, if you will', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
-            {'value': 'Hi there', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
-            {'value': 'Thinking of another generic string', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
-            {'value': 'Last one boys', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text"},
+            {'value': 'interval 10', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
+            {'value': 'item that is in the second place', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
+            {'value': 'the third one, if you will', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
+            {'value': 'Hi there', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
+            {'value': 'Thinking of another generic string', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
+            {'value': 'Last one boys', 'dn': ('options', 'item'), 'title': "title field", 'description':  "description field", 'type': 'string', 'field_type': "text", 'searchable': True},
         ]
 
         dsm_model = {
@@ -1856,10 +1856,10 @@ class TestBasicsListItem(unittest.TestCase):
         ]
 
         expected = [
-            {'value': 5164.23076923, 'dn': ('item',), 'title': 'counter', 'description': None, 'type': 'string', 'field_type': 'float'},
-            {'value': '2020-03-26T15:00:00Z', 'dn': ('item',), 'title': 'timestamp', 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 5164.23076924, 'dn': ('item',), 'title': 'counter', 'description': None, 'type': 'string', 'field_type': 'float'},
-            {'value': '2020-03-26T15:00:01Z', 'dn': ('item',), 'title': 'timestamp', 'description': None, 'type': 'string', 'field_type': None},
+            {'value': 5164.23076923, 'dn': ('item',), 'title': 'counter', 'description': None, 'type': 'string', 'field_type': 'float', 'searchable': True, 'searchable': True},
+            {'value': '2020-03-26T15:00:00Z', 'dn': ('item',), 'title': 'timestamp', 'description': None, 'type': 'string', 'field_type': None, 'searchable': True, 'searchable': True},
+            {'value': 5164.23076924, 'dn': ('item',), 'title': 'counter', 'description': None, 'type': 'string', 'field_type': 'float', 'searchable': True, 'searchable': True},
+            {'value': '2020-03-26T15:00:01Z', 'dn': ('item',), 'title': 'timestamp', 'description': None, 'type': 'string', 'field_type': None, 'searchable': True, 'searchable': True},
         ]
 
 
@@ -1898,10 +1898,10 @@ class TestBasicsListItem(unittest.TestCase):
         ]
 
         expected = [
-            {'value': 5164.23076923, 'dn': ('item',), 'title': 'counter', 'description': "float indicating amount", 'type': 'string', 'field_type': 'float'},
-            {'value': '2020-03-26T15:00:00Z', 'dn': ('item',), 'title': 'timestamp', 'description': "iso", 'type': 'string', 'field_type': "iso_timestamp"},
-            {'value': 5164.23076924, 'dn': ('item',), 'title': 'counter', 'description': "float indicating amount", 'type': 'string', 'field_type': 'float'},
-            {'value': '2020-03-26T15:00:01Z', 'dn': ('item',), 'title': 'timestamp', 'description': "iso", 'type': 'string', 'field_type': "iso_timestamp"},
+            {'value': 5164.23076923, 'dn': ('item',), 'title': 'counter', 'description': "float indicating amount", 'type': 'string', 'field_type': 'float', 'searchable': True},
+            {'value': '2020-03-26T15:00:00Z', 'dn': ('item',), 'title': 'timestamp', 'description': "iso", 'type': 'string', 'field_type': "iso_timestamp", 'searchable': True},
+            {'value': 5164.23076924, 'dn': ('item',), 'title': 'counter', 'description': "float indicating amount", 'type': 'string', 'field_type': 'float', 'searchable': True},
+            {'value': '2020-03-26T15:00:01Z', 'dn': ('item',), 'title': 'timestamp', 'description': "iso", 'type': 'string', 'field_type': "iso_timestamp", 'searchable': True},
         ]
 
         dsm_model = {
@@ -1937,9 +1937,9 @@ class TestBasicsListItem(unittest.TestCase):
         }
 
         expected = [
-            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description': None, 'type': 'string', 'field_type': None},
-            {'value': 23, 'dn': ('person', 'age'), 'title': 'Age', 'description': None, 'type': 'integer', 'field_type': None},
-            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': None, 'type': 'string', 'field_type': None},
+            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
+            {'value': 23, 'dn': ('person', 'age'), 'title': 'Age', 'description': None, 'type': 'integer', 'field_type': None, 'searchable': True},
+            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': None, 'type': 'string', 'field_type': None, 'searchable': True},
         ]
 
         dsm_model = {
@@ -1987,9 +1987,9 @@ class TestBasicsListItem(unittest.TestCase):
         }
 
         expected = [
-            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description':  "Name of Person", 'type': 'string', 'field_type': "first_name"},
-            {'value': 23, 'dn': ('person', 'age'), 'title': 'Age', 'description': "Date of birth till now, in years.", 'type': 'integer', 'field_type': "human_age"},
-            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': "Favorite color of person", 'type': 'string', 'field_type': "color_name"},
+            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description':  "Name of Person", 'type': 'string', 'field_type': "first_name", 'searchable': True},
+            {'value': 23, 'dn': ('person', 'age'), 'title': 'Age', 'description': "Date of birth till now, in years.", 'type': 'integer', 'field_type': "human_age", 'searchable': True},
+            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': "Favorite color of person", 'type': 'string', 'field_type': "color_name", 'searchable': True},
         ]
 
         dsm_model = {
@@ -2043,8 +2043,8 @@ class TestBasicsListItem(unittest.TestCase):
         }
 
         expected = [
-            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description':  "Name of Person", 'type': 'string', 'field_type': "first_name"},
-            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': "Favorite color of person", 'type': 'string', 'field_type': "color_name"},
+            {'value': 'Bob', 'dn': ('person', 'name'), 'title': 'Name', 'description':  "Name of Person", 'type': 'string', 'field_type': "first_name", 'searchable': True},
+            {'value': 'blue', 'dn': ('person', 'favorite_color'), 'title': 'Favorite Color', 'description': "Favorite color of person", 'type': 'string', 'field_type': "color_name", 'searchable': True},
         ]
 
         dsm_model = {

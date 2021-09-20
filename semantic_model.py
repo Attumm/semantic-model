@@ -523,6 +523,7 @@ def list_item(model, dn, value):
         "description": model.get("description"),
         "type": model["type"],
         "field_type": model.get("field_type"),
+        "searchable": model.get("searchable", True),
     }
     item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
     return item
