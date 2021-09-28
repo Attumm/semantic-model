@@ -130,8 +130,7 @@ def dn_lookup_loop(gather_args, model, dn_parent, storage):
 
 
 def dn_lookup(gather_args, model, dn_parent, storage):
-    data = storage["input"][gather_args[KEY_GATHER]]
-
+    data = get_data(gather_args, model, dn_parent, storage)
     current_pointer = data
     for item in gather_args["dn"].split("."):
         try:
