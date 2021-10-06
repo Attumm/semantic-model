@@ -376,12 +376,17 @@ def create_uuid5(domain, id):
     return str(uuid.uuid5(namespace, id))
 
 
+def format_dict_to_key_list(item, **kwargs):
+    return [key for key in item.keys()]
+
+
 POSTFORMAT = {
     "default": default_postformat,
     "int_to_iso_timestamp": int_to_iso_timestamp,
     "regex_to_iso_timestamp": regex_to_iso_timestamp,
     "regex_search": regex_search,
     "hash_uuid": create_uuid5,
+    "format_dict_to_key_list": format_dict_to_key_list,
 }
 
 
