@@ -30,5 +30,5 @@ from semantic_model import POSTFORMAT
 def strip(item, **kwargs):
     return item.strip()
 
-POSTFORMAT["strip] = strip
+POSTFORMAT["strip"] = strip
 ```
