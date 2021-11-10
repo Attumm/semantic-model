@@ -646,7 +646,7 @@ class TestBasics(unittest.TestCase):
                     },
                     "source": {
                         "type": "json_key", "source": "input", "dn": "items", "multi": True,
-                        "filter_type": "not_contains", "filter_args": {"arg": "second"},
+                        "filter_type": "contains", "filter_args": {"arg": "10"},
                     },
                     "description": "",
                     "item": {
