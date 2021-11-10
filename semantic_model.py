@@ -336,10 +336,13 @@ def dict_key_is_empty(item, key):
 def not_cotains(item, arg):
     return arg not in item
 
+def contains(item, arg):
+    return arg in item
 
 FILTERS = {
     "dict_key_is_empty": dict_key_is_empty,
     "not_contains": not_cotains,
+    "contains": contains,
     "default": always_false,
 }
 
