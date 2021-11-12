@@ -144,7 +144,10 @@ def dn_lookup(gather_args, model, dn_parent, storage):
 def get_from_source(gather_args, model, dn_parent, storage):
     data = get_data(gather_args, model, dn_parent, storage)
 
-    dn = gather_args["path_to_target"] or gather_args["dn"]
+    try:
+        dn = gather_args.get("path_to_target") or gather_args["dn"]
+    except KeyError:
+        raise InvalidModel(f"Missing 'dn' in source  {model['source']['type']} with dn: {dn_parent}")
     found, result = get_by_dn(data, dn)
     if found:
         return result
@@ -332,16 +335,18 @@ def dict_key_is_empty(item, key):
     return not bool(item.get(key))
 
 
-def not_cotains(item, arg):
-    return arg not in item
-
 def contains(item, arg):
     return arg in item
 
+
+def not_cotains(item, arg):
+    return arg not in item
+
+
 FILTERS = {
-    "dict_key_is_empty": dict_key_is_empty,
-    "not_contains": not_cotains,
     "contains": contains,
+    "not_contains": not_cotains,
+    "dict_key_is_empty": dict_key_is_empty,
     "default": always_false,
 }
 

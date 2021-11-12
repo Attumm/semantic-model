@@ -2091,5 +2091,52 @@ class TestBasicsListItem(unittest.TestCase):
             self.assertDictEqual(expected[i],  item)
 
 
+class TestBasicSource(unittest.TestCase):
+
+    def test_basics(self):
+        input_data = {
+            "foo": "bar"
+        }
+
+        expected = {
+            "baz": "bar"
+        }
+
+        dsm_model = {
+            "type": "dict",
+            "nested": {
+                "baz": {
+                    "type": "str",
+                    "source": {"type": "get_from_source", "source": "input", "dn": "foo"},
+                    "item": {
+                        "type": "string",
+                    }
+                }
+            }
+        }
+        result = run_detail(dsm_model, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_missing_dn(self):
+        input_data = {
+            "foo": "bar"
+        }
+
+        dsm_model = {
+            "type": "dict",
+            "nested": {
+                "baz": {
+                    "type": "str",
+                    "source": {"type": "get_from_source", "source": "input"},
+                    "item": {
+                        "type": "string",
+                    }
+                }
+            }
+        }
+        with self.assertRaisesRegex(InvalidModel,  r"Missing 'dn' in source  get_from_source with dn: \('baz',\)"):
+            _ = run_detail(dsm_model, input=input_data)
+
+
 if __name__ == "__main__":
     unittest.main()
