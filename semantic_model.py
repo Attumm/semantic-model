@@ -55,11 +55,11 @@ KEY_STORAGE_LIST_ITEM = "__global_list_item"
 STORAGE[KEY_STORAGE_LIST_ITEM] = {}
 
 
-def prepare_model_for_run(model, role=None):
+def prepare_model_for_run(model, roles=None):
     pass
 
 
-def run_with_json(action, model_path, role=None, **input_path):
+def run_with_json(action, model_path, roles=None, **input_path):
     dsm_model = json.load(open(model_path))
     input_data = {k: json.load(open(v)) for k, v in input_path.items()}
 
@@ -68,28 +68,28 @@ def run_with_json(action, model_path, role=None, **input_path):
     except KeyError:
         raise ValueError(f"Action not part of {ACTIONS.keys()}")
 
-    return func(dsm_model, role=role, **input_data)
+    return func(dsm_model, roles=roles, **input_data)
 
 
-def run_detail_json(model_path, role=None, **input_path):
-    return run_with_json("detail", model_path, role=None, **input_path)
+def run_detail_json(model_path, roles=None, **input_path):
+    return run_with_json("detail", model_path, roles=None, **input_path)
 
 
-def run_list_json(model_path, role=None, **input_path):
-    return run_with_json("list", model_path, role=None, **input_path)
+def run_list_json(model_path, roles=None, **input_path):
+    return run_with_json("list", model_path, roles=None, **input_path)
 
 
-def run_node_json(model_path, role=None, **input_path):
-    return run_with_json("node", model_path, role=None, **input_path)
+def run_node_json(model_path, roles=None, **input_path):
+    return run_with_json("node", model_path, roles=None, **input_path)
 
 
-def run_detail(model, role=None, **input_data):
+def run_detail(model, roles=None, **input_data):
     # setup connection to database
     # setup api credential
     for k, v in input_data.items():
         STORAGE["input"][k] = v
 
-    return full_detail(model, role=role, storage=STORAGE)
+    return full_detail(model, roles=roles, storage=STORAGE)
 
 
 def get_data(gather_args, model, dn_parent, storage):
@@ -464,33 +464,33 @@ def init_item(model, dn):
     return item
 
 
-def has_read_rights(model, role):
-    if role is None:
+def has_read_rights(model, roles):
+    if roles is None:
         return True
 
-    roles = model.get("rbac", {})
-    return roles.get(role, {}).get("read") is True
+    rbac = {k for k, v in model.get("rbac", {}).items() if v.get("read") is True}
+    return bool(set(roles) & rbac)
 
 
 def new_dn(dn, key):
     return dn + (key,)
 
 
-def full_detail(model, dn=(), context_data=None, role=None, storage=None):
+def full_detail(model, dn=(), context_data=None, roles=None, storage=None):
     item = init_item(model, dn)
 
     if model["type"] == "dict":
         for key, sub_model in model["nested"].items():
             if sub_model.get("skip"):
                 continue
-            if has_read_rights(sub_model, role):
-                item[key] = full_detail(sub_model, new_dn(dn, key), role=role, storage=storage)
+            if has_read_rights(sub_model, roles):
+                item[key] = full_detail(sub_model, new_dn(dn, key), roles=roles, storage=storage)
 
     elif model["type"] == "list":
         if "item" in model:
             sub_model = model["item"]
             for result in gather_items(model, dn, storage=storage):
-                if has_read_rights(sub_model, role):
+                if has_read_rights(sub_model, roles):
                     sub_item = init_item(sub_model, dn)
                     # TODO apply "item" logic
                     item.append(result)
@@ -499,13 +499,13 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
             for result in gather_items(model, dn, storage=storage):
                 p = []
                 for i, sub_model in enumerate(model["items"]):
-                    if has_read_rights(sub_model, role):
+                    if has_read_rights(sub_model, roles):
                         sub_item = init_item(sub_model, dn)
                         storage["context_data"] = result
 
                         result_i = gather_item(sub_model, dn, storage=storage)
                         # TODO apply "item" logic, and tests
-                        # result_i = full_detail(sub_model, dn+("[]",), context_data=result, role=role, storage=storage)
+                        # result_i = full_detail(sub_model, dn+("[]",), context_data=result, roles=roles, storage=storage)
                         p.append(result_i)
 
                 item.append(p)
@@ -514,9 +514,9 @@ def full_detail(model, dn=(), context_data=None, role=None, storage=None):
             for partial_result in gather_items(model, dn, storage=storage):
                 sub_item = {}
                 for key, sub_model in model["nested"].items():
-                    if has_read_rights(sub_model, role):
+                    if has_read_rights(sub_model, roles):
                         storage["context_data"] = partial_result
-                        sub_item[key] = full_detail(sub_model,  new_dn(dn, key), role=role, storage=storage)
+                        sub_item[key] = full_detail(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
                 item.append(sub_item)
         # item of default
         else:
@@ -557,14 +557,14 @@ def list_node(model, dn, value):
     return item
 
 
-def list_items(model, dn=(), context_data=None, role=None, storage=None):
+def list_items(model, dn=(), context_data=None, roles=None, storage=None):
     item = init_item(model, dn)
     if model["type"] == "dict":
         for key, sub_model in model["nested"].items():
             if sub_model.get("skip"):
                 continue
-            if has_read_rights(sub_model, role):
-                yield from list_items(sub_model, new_dn(dn, key), role=role, storage=storage)
+            if has_read_rights(sub_model, roles):
+                yield from list_items(sub_model, new_dn(dn, key), roles=roles, storage=storage)
 
     elif model["type"] == "list":
 
@@ -572,7 +572,7 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
         if "item" in model:
             sub_model = model["item"]
             for result in gather_items(model, dn, storage=storage):
-                if has_read_rights(sub_model, role):
+                if has_read_rights(sub_model, roles):
                     sub_item = init_item(sub_model, dn)
                     # TODO apply "item" logic
                     yield list_item(sub_model, dn+("item",), result)
@@ -581,7 +581,7 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
         elif "items" in model:
             for result in gather_items(model, dn, storage=storage):
                 for i, sub_model in enumerate(model["items"]):
-                    if has_read_rights(sub_model, role):
+                    if has_read_rights(sub_model, roles):
                         # TODO apply "sub_item" logic
                         sub_item = init_item(sub_model, dn)
                         storage["context_data"] = result
@@ -592,9 +592,9 @@ def list_items(model, dn=(), context_data=None, role=None, storage=None):
         elif "nested" in model:
             for partial_result in gather_items(model, dn, storage=storage):
                 for key, sub_model in model["nested"].items():
-                    if has_read_rights(sub_model, role):
+                    if has_read_rights(sub_model, roles):
                         storage["context_data"] = partial_result
-                        yield from list_items(sub_model,  new_dn(dn, key), role=role, storage=storage)
+                        yield from list_items(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
         # return default or initil item
         else:
             yield item
@@ -608,24 +608,24 @@ def is_node(model):
     return model["type"] in ["dict", "list"] and all("nested" not in sub_model for sub_model in model["nested"].values())
 
 
-def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
+def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
     item = init_item(model, dn)
     if model["type"] == "dict":
         if is_node(model):
-            result = full_detail(model, dn, role=role, storage=storage)
+            result = full_detail(model, dn, roles=roles, storage=storage)
             yield list_node(model=model, dn=dn, value=result)
         else:
             for key, sub_model in model["nested"].items():
                 if sub_model.get("skip"):
                     continue
 
-                if has_read_rights(sub_model, role):
+                if has_read_rights(sub_model, roles):
 
-                    yield from list_nodes(sub_model, new_dn(dn, key), role=role, storage=storage)
+                    yield from list_nodes(sub_model, new_dn(dn, key), roles=roles, storage=storage)
 
     elif model["type"] == "list":
         if is_node(model):
-            result = full_detail(model, dn, role=role, storage=storage)
+            result = full_detail(model, dn, roles=roles, storage=storage)
             for item in result:
                 yield list_node(model=model, dn=dn, value=item)
         else:
@@ -634,7 +634,7 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
             if "item" in model:
                 sub_model = model["item"]
                 for result in gather_items(model, dn, storage=storage):
-                    if has_read_rights(sub_model, role):
+                    if has_read_rights(sub_model, roles):
                         # TODO apply "item" logic, and tests
                         sub_item = init_item(sub_model, dn)
                         yield list_nodes(sub_model, dn+("item",), result)
@@ -643,7 +643,7 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
             elif "items" in model:
                 for result in gather_items(model, dn, storage=storage):
                     for i, sub_model in enumerate(model["items"]):
-                        if has_read_rights(sub_model, role):
+                        if has_read_rights(sub_model, roles):
                             # TODO apply "item" logic, and tests
                             sub_item = init_item(sub_model, dn)
                             storage["context_data"] = result
@@ -654,9 +654,9 @@ def list_nodes(model, dn=(), context_data=None, role=None, storage=None):
             elif "nested" in model:
                 for partial_result in gather_items(model, dn, storage=storage):
                     for key, sub_model in model["nested"].items():
-                        if has_read_rights(sub_model, role):
+                        if has_read_rights(sub_model, roles):
                             storage["context_data"] = partial_result
-                            yield from list_nodes(sub_model,  new_dn(dn, key), role=role, storage=storage)
+                            yield from list_nodes(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
             # return default or initil item
             else:
                 pass
@@ -676,28 +676,28 @@ def has_list_item_config(model):
     return "standard" in model.get("nested", {}) or "common" in model.get("nested", {})
 
 
-def run_list(model, role=None, **input_data):
+def run_list(model, roles=None, **input_data):
     for k, v in input_data.items():
         STORAGE["input"][k] = v
 
     if has_list_item_config(model):
         common_key = "common" if "common" in model.get("nested", {}) else "standard"
-        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), role=role, storage=STORAGE)
+        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), roles=roles, storage=STORAGE)
         STORAGE[KEY_STORAGE_LIST_ITEM] = {f"common_{key}": val for key, val in common_fields.items()}
 
-    return list_items(model, role=role, storage=STORAGE)
+    return list_items(model, roles=roles, storage=STORAGE)
 
 
-def run_nodes(model, role=None, **input_data):
+def run_nodes(model, roles=None, **input_data):
     for k, v in input_data.items():
         STORAGE["input"][k] = v
 
     if has_list_item_config(model):
         common_key = "common" if "common" in model.get("nested", {}) else "standard"
-        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), role=role, storage=STORAGE)
+        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), roles=roles, storage=STORAGE)
         STORAGE[KEY_STORAGE_LIST_ITEM] = {f"common_{key}": val for key, val in common_fields.items()}
 
-    return list_nodes(model, role=role, storage=STORAGE)
+    return list_nodes(model, roles=roles, storage=STORAGE)
 
 
 def rbac_views(items):

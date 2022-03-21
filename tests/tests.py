@@ -134,8 +134,8 @@ class TestBasics(unittest.TestCase):
                 }
             }
         }
-        role = "restricted"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["restricted",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_full(self):
@@ -188,8 +188,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_role_read_right_is_bool(self):
@@ -230,8 +230,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_view_right_for_key_not_items_list_items(self):
@@ -274,8 +274,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_multiple_items_empty_result(self):
@@ -326,8 +326,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "restricted"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = "restricted"
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_multiple_items_empty_no_read_rbac_result(self):
@@ -378,8 +378,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full", ]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_multiple_items_empty_single_result(self):
@@ -444,8 +444,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "restricted"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["restricted", ]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_multiple_items_full(self):
@@ -515,8 +515,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_nested(self):
@@ -586,8 +586,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_nested_filter_list_item(self):
@@ -661,8 +661,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "full"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_rbac_multiple_items_full__FEFE_(self):
@@ -817,8 +817,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "admin"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["admin",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_filter_type_list(self):
@@ -898,8 +898,8 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "admin"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["admin",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_filter_quite_nested_type_list(self):
@@ -1036,8 +1036,496 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        role = "admin"
-        result = run_detail(dsm_model, role=role, input=input_data)
+        roles = ["admin",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_roles_rbac_restricted(self):
+        input_data = {
+            "items": [
+                "interval 1",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there, I'm 4",
+                "Thinking of another generic string five",
+                "Last one boys, six"
+            ]
+        }
+
+        expected = {}
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                "full": {"read": True},
+                "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "foo": {"read": True},
+                        "bar": {"read": True},
+                    },
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "options of counting items",
+                    "item": {
+                        "type": "string",
+                        "example": "Random strings",
+                    }
+                }
+            }
+        }
+        roles = ["restricted",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_roles_rbac_last_rbac(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        expected = {
+            "options": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                "foo": {"read": True},
+                "bar": {"read": True},
+                "baz": {"read": True},
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "foo": {"read": True},
+                        "bar": {"read": True},
+                        "baz": {"read": True},
+                    },
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "foo": {"read": True},
+                            "bar": {"read": True},
+                            "baz": {"read": True},
+                        },
+                    }
+                }
+            }
+        }
+
+        roles = ["baz",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_roles_rbac_first_rbac(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        expected = {
+            "options": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                "foo": {"read": True},
+                "bar": {"read": True},
+                "baz": {"read": True},
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "foo": {"read": True},
+                        "bar": {"read": True},
+                        "baz": {"read": True},
+                    },
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "foo": {"read": True},
+                            "bar": {"read": True},
+                            "baz": {"read": True},
+                        },
+                    }
+                }
+            }
+        }
+
+        roles = ["foo",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_roles_read_right_is_bool(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        expected = {}
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                    "full": {"read": True},
+                    "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": "True"},  # is string not bool
+                    },
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                    }
+                }
+            }
+        }
+
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_roles_view_right_for_key_not_items_list_items(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
+
+        expected = {
+            "options": [],
+        }
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                    "full": {"read": True},
+                    "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                    },
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                    }
+                }
+            }
+        }
+
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_rbac_roles_multiple_items_empty_result(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ]
+        }
+
+        expected = {}
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                    "full": {"read": True},
+                    "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                    },  # rbac, is only for full ###
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                },
+                "items": {
+                    "title": "Items",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                    },
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                }
+            }
+        }
+
+        roles = ["restricted",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_rbac_roles_multiple_items_empty_no_read_rbac_result(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ]
+        }
+
+        expected = {}
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                    "full": {"read": True},
+                    "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"update": True},
+                    },  # rbac, is only for full ###
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                },
+                "items": {
+                    "title": "Items",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"update": True},
+                    },
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                }
+            }
+        }
+
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_rbac_roles_multiple_items_empty_single_result(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ]
+        }
+
+        expected = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ],
+        }
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                "full": {"read": True},
+                "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                    }, # rbac, is only for full
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "full": {"read": True},
+                        },
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                },
+                "items": {
+                    "title": "Items",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                        "restricted": {"read": True}
+                    },
+                    "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "full": {"read": True},
+                            "restricted": {"read": True}
+                        },
+
+                        "example": "defaults-from HC4_OBOPRE_HTTP_PARENT",
+                    }
+                }
+            }
+        }
+
+        roles = ["restricted",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
+        self.assertDictEqual(result, expected)
+
+    def test_basics_rbac_roles_multiple_items_full(self):
+        input_data = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ]
+        }
+
+        expected = {
+            "items": [
+                "interval 10",
+                "item that is in the second place",
+            ],
+            "options": [
+                "interval 10",
+                "item that is in the second place",
+            ]
+        }
+
+        dsm_model = {
+            "title": "Monitor Options",
+            "type": "dict",
+            "description": "",
+            "rbac": {
+                "full": {"read": True},
+                "restricted": {"read": True}
+            },
+            "nested": {
+                "options": {
+                    "title": "Options",
+                    "type": "list",
+                    "rbac": {
+                            "full": {"read": True},
+                            "restricted": {"read": True}
+                    },  # rbac, is only for full
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "full": {"read": True},
+                            "restricted": {"read": True}
+                        },
+                        "example": "",
+                    }
+                },
+                "items": {
+                    "title": "Items",
+                    "type": "list",
+                    "rbac": {
+                        "full": {"read": True},
+                        "restricted": {"read": True}
+                    },
+                    "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
+                    "description": "",
+                    "item": {
+                        "type": "string",
+                        "rbac": {
+                            "full": {"read": True},
+                            "restricted": {"read": True}
+                        },
+                        "example": "",
+                    }
+                }
+            }
+        }
+
+        roles = ["full",]
+        result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
     def test_basics_postprocess(self):
