@@ -1201,7 +1201,7 @@ class TestBasics(unittest.TestCase):
         result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
-    def test_basics_roles_read_right_is_bool(self):
+    def test_basics_roles_multiple_roles_per_level(self):
         input_data = {
             "items": [
                 "interval 10",
@@ -1213,14 +1213,23 @@ class TestBasics(unittest.TestCase):
             ]
         }
 
-        expected = {}
+        expected = {
+            "options": [
+                "interval 10",
+                "item that is in the second place",
+                "the third one, if you will",
+                "Hi there",
+                "Thinking of another generic string",
+                "Last one boys"
+            ]
+        }
 
         dsm_model = {
             "title": "Monitor Options",
             "type": "dict",
             "description": "",
             "rbac": {
-                    "full": {"read": True},
+                    "foo": {"read": True},
                     "restricted": {"read": True}
             },
             "nested": {
@@ -1228,18 +1237,21 @@ class TestBasics(unittest.TestCase):
                     "title": "Options",
                     "type": "list",
                     "rbac": {
-                        "full": {"read": "True"},  # is string not bool
+                        "bar": {"read": True},
                     },
                     "source": {"type": "json_key", "source": "input", "dn": "items", "multi": True},
                     "description": "",
                     "item": {
+                        "rbac": {
+                            "baz": {"read": True},
+                        },
                         "type": "string",
                     }
                 }
             }
         }
 
-        roles = ["full",]
+        roles = ["foo", "bar", "baz"]
         result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
@@ -1264,7 +1276,7 @@ class TestBasics(unittest.TestCase):
             "type": "dict",
             "description": "",
             "rbac": {
-                    "full": {"read": True},
+                    "foo": {"read": True},
                     "restricted": {"read": True}
             },
             "nested": {
@@ -1272,7 +1284,7 @@ class TestBasics(unittest.TestCase):
                     "title": "Options",
                     "type": "list",
                     "rbac": {
-                        "full": {"read": True},
+                        "foo": {"read": True},
                     },
                     "source": {"type": "dn_lookup_loop", "source": "input", "dn": "items"},
                     "description": "",
@@ -1283,7 +1295,7 @@ class TestBasics(unittest.TestCase):
             }
         }
 
-        roles = ["full",]
+        roles = ["foo", "bar", "baz"]
         result = run_detail(dsm_model, roles=roles, input=input_data)
         self.assertDictEqual(result, expected)
 
