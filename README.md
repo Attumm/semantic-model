@@ -3,6 +3,11 @@ All data about data in one model.
 The single source of truth about data in one model.
 
 
+### Install
+```sh
+pip install semantic-model
+```
+
 ### Create initial sm model
 ```sh
 python3 -m semantic_model -mode one_to_one -input example.json > sm_model.json
