@@ -157,8 +157,6 @@ def one_to_one_looper(data, title=None, dn="", has_context_data=False):
                 nested_result = {}
                 result["nested"] = nested_result
                 
-
-                #for k, v in data[0].items():
                 for k, v in get_all_uniq_keys(data).items():
                     nested_result[k] = one_to_one_looper(v, title=k, dn=create_dn(dn, k), has_context_data=True)
             else:
