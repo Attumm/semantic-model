@@ -163,6 +163,9 @@ def one_to_one_looper(data, title=None, dn="", has_context_data=False):
                 type_found = list(types_found.keys())[0]
                 result["item"] = one_to_one_looper(data[0], dn=create_dn_list(result.get("title"), dn))
 
+        elif len(types_found) == 0:
+            result["item"] = one_to_one_looper("", dn=create_dn_list(result.get("title"), dn))
+
         else:
             result["items"] = []
             for type_found, index in types_found.items():

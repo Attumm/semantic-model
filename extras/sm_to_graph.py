@@ -1,7 +1,7 @@
 import json
 import sys
 
-from dsm import dsm_looper
+from semantic_model import dsm_looper
 
 
 def get_color(item):
@@ -78,6 +78,7 @@ if __name__ == "__main__":
     print(f'edge [fontname = "{font}"]');
     node = Node("dsm_model", "()")
     Node.head = node
+    print("DN:", DN)
     for i, item in enumerate(DN, start=2):
         node = Node(i, str(item))
         parent_dn = "()" if len(item) == 1 else str(item[:-1])
