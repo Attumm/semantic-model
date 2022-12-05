@@ -2637,6 +2637,63 @@ class TestBasicSource(unittest.TestCase):
         with self.assertRaisesRegex(InvalidModel,  r"Missing 'dn' in source  get_from_source with dn: \('baz',\)"):
             _ = run_detail(dsm_model, input=input_data)
 
+    def test_basics_error_on_model(self):
+        input_data = {
+            "foo": "bar"
+        }
+
+        dsm_model = {
+            "type": "dict",
+            "nested": {
+                "baz": {
+                    "type": "list",
+                    "source": {
+                        "type": "get_from_source",
+                        "source": "input",
+                        "dn": "foo",
+                    },
+                    "items": { # Error
+                        "type": "string",
+                        "source": {
+                            "type": "key_lookup",
+                            "dn": "missing"
+                        }
+                    }
+                }
+            }
+        }
+        with self.assertRaisesRegex(InvalidModel, r"Error while getting 'type' on dn \('baz',\): string indices must be integers"):
+            _ = run_detail(dsm_model, input=input_data)
+
+    def test_basics_error_on_model_loop_over_none(self):
+        input_data = {
+            "foo": None
+        }
+
+        dsm_model = {
+            "type": "dict",
+            "nested": {
+                "baz": {
+                    "type": "list",
+                    "source": {
+                        "type": "get_from_source",
+                        "source": "input",
+                        "dn": "foo",
+                    },
+                    "nested": {
+                        "type": "string",
+                        "source": {
+                            "type": "key_lookup",
+                            "dn": "missing"
+                        }
+                    }
+                }
+            }
+        }
+        with self.assertRaisesRegex(InvalidModel, r"Error while gathering data, on dn \('baz',\), reason: 'NoneType' object is not iterable"):
+            _ = run_detail(dsm_model, input=input_data)
+            print(_)
+
 
 if __name__ == "__main__":
     unittest.main()

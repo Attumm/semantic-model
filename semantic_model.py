@@ -461,6 +461,8 @@ def get_item_type(model, dn):
         return model["type"]
     except KeyError:
         raise InvalidModel(f"Missing 'type' on dn {dn}")
+    except TypeError as e:
+        raise InvalidModel(f"Error while getting 'type' on dn {dn}: {e}")
 
 
 def init_item(model, dn):
