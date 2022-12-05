@@ -435,10 +435,14 @@ def gather_items(model, dn, storage):
         raise InvalidModel(f"Missing 'source' on dn {dn}")
         return []
 
-    gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
-    for item in gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage):
-        if not filter_func(item, **filter_args):
-            yield postformat_func(item, **postformat_args)
+    try:
+        gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
+        for item in gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage):
+            if not filter_func(item, **filter_args):
+                yield postformat_func(item, **postformat_args)
+
+    except Exception as e:
+        raise InvalidModel(f"Error while gathering data, on dn {dn}, reason: {e}")
 
 
 def gather_item(model, dn, storage):
