@@ -155,10 +155,11 @@ def get_from_source(gather_args, model, dn_parent, storage):
 
 
 def key_lookup(gather_args, model, dn_parent, storage):
+    key = gather_args.get("key") or gather_args.get("dn")
     if KEY_GATHER not in gather_args:
-        return storage["context_data"].get(gather_args["key"])  # TODO set better debugging
+        return storage["context_data"].get(key)  # TODO set better debugging
     else:
-        return storage["input"][gather_args[KEY_GATHER]].get(gather_args["dn"])
+        return storage["input"][gather_args[KEY_GATHER]].get(key)
 
 
 def loop_over(gather_args, model, dn_parent, storage):
@@ -435,10 +436,14 @@ def gather_items(model, dn, storage):
         raise InvalidModel(f"Missing 'source' on dn {dn}")
         return []
 
-    gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
-    for item in gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage):
-        if not filter_func(item, **filter_args):
-            yield postformat_func(item, **postformat_args)
+    try:
+        gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
+        for item in gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage):
+            if not filter_func(item, **filter_args):
+                yield postformat_func(item, **postformat_args)
+
+    except Exception as e:
+        raise InvalidModel(f"Error while gathering data, on dn {dn}, reason: {e}")
 
 
 def gather_item(model, dn, storage):
@@ -456,6 +461,8 @@ def get_item_type(model, dn):
         return model["type"]
     except KeyError:
         raise InvalidModel(f"Missing 'type' on dn {dn}")
+    except TypeError as e:
+        raise InvalidModel(f"Error while getting 'type' on dn {dn}: {e}")
 
 
 def init_item(model, dn):

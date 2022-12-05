@@ -14,7 +14,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    version='2.0.0',
+    version='2.1.0',
     py_modules=['semantic_model', 'one_to_one', 'data'],
     install_requires=['settipy'],
     include_package_data=True,
@@ -34,5 +34,6 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 )
