@@ -155,10 +155,11 @@ def get_from_source(gather_args, model, dn_parent, storage):
 
 
 def key_lookup(gather_args, model, dn_parent, storage):
+    key = gather_args.get("key") or gather_args.get("dn")
     if KEY_GATHER not in gather_args:
-        return storage["context_data"].get(gather_args["key"])  # TODO set better debugging
+        return storage["context_data"].get(key)  # TODO set better debugging
     else:
-        return storage["input"][gather_args[KEY_GATHER]].get(gather_args["dn"])
+        return storage["input"][gather_args[KEY_GATHER]].get(key)
 
 
 def loop_over(gather_args, model, dn_parent, storage):
