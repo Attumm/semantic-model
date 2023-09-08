@@ -2011,17 +2011,27 @@ class TestBasics(unittest.TestCase):
         }
 
         expected = [
-        {
-            "_dn": (
-            "person",
-            ),
-            "_title": "Person",
-            "_description": "",
-            "_type": "dict",
-            "_field_type": None,
-            "name": "Bob",
-            "favorite_color": "blue"
-        }
+            {
+                "_dn": [
+                    "person"
+                ],
+                "__columns": [
+                    "name",
+                    "favorite_color"
+                ],
+                "name": "Bob",
+                "_name_dn": [
+                    "person",
+                    "name"
+                ],
+                "_name_type": "string",
+                "favorite_color": "blue",
+                "_favorite_color_dn": [
+                    "person",
+                    "favorite_color"
+                ],
+                "_favorite_color_type": "string"
+            }
         ]
 
         dsm_model = {

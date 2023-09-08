@@ -548,19 +548,41 @@ def list_item(model, dn, value):
     return item
 
 
-def list_node(model, dn, value):
-    item = {
-        "_dn": dn,
-        "_title": model.get("title"),
-        "_description": model.get("description"),
-        "_type": model["type"],
-        "_field_type": model.get("field_type"),
+def create_meta_data_list(model, dn, key, value):
+    meta_data = {
+        key: value,
+        f"_{key}_dn": dn,
+        # f"_{key}_title": model.get("title"),
+        f"_{key}_type": model["type"],
     }
+    if model.get("field_type"):
+        meta_data[f"_{key}_field_type"] = model.get("field_type")
+    if model.get("description"):
+        meta_data[f"_{key}_description"] = model.get("description")
+
+    rbac = model.get("rbac")
+    if rbac is not None:
+        meta_data[f"_{key}_rbac_create"] = [group for group, policies in rbac.items() if policies.get("create")]
+        meta_data[f"_{key}_rbac_read"] = [group for group, policies in rbac.items() if policies.get("read")]
+        meta_data[f"_{key}_rbac_update"] = [group for group, policies in rbac.items() if policies.get("update")]
+        meta_data[f"_{key}_rbac_delete"] = [group for group, policies in rbac.items() if policies.get("delete")]
+
+    return meta_data
+
+
+def list_node(model, dn, value):
+    item = {"_dn": dn, "__columns": []}
     item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
-    if type(value) == dict:
-        item.update(value)
+    if isinstance(value, dict):
+        for key, loop_value in value.items():
+            nested_value = create_meta_data_list(model["nested"][key], new_dn(dn, key), key, loop_value)
+            item.update(nested_value)
+            item["__columns"].append(key)
     else:
-        item["value"] = value
+        meta_item = create_meta_data_list(model, dn, "value", value)
+        meta_item["__columns"] = ["value",]
+
+        item.update(meta_item)
     return item
 
 
@@ -582,7 +604,7 @@ def list_items(model, dn=(), context_data=None, roles=None, storage=None):
                 if has_read_rights(sub_model, roles):
                     sub_item = init_item(sub_model, dn)
                     # TODO apply "item" logic
-                    yield list_item(sub_model, dn+("item",), result)
+                    yield list_item(sub_model, dn + ("item",), result)
 
         # list contains multiple single items
         elif "items" in model:
@@ -593,7 +615,7 @@ def list_items(model, dn=(), context_data=None, roles=None, storage=None):
                         sub_item = init_item(sub_model, dn)
                         storage["context_data"] = result
                         result_i = gather_item(sub_model, dn, storage=storage)
-                        yield list_item(sub_model, dn+("item",), result_i)
+                        yield list_item(sub_model, dn + ("item",), result_i)
 
         # list contains dict
         elif "nested" in model:
@@ -627,7 +649,6 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                     continue
 
                 if has_read_rights(sub_model, roles):
-
                     yield from list_nodes(sub_model, new_dn(dn, key), roles=roles, storage=storage)
 
     elif model["type"] == "list":
@@ -644,7 +665,7 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                     if has_read_rights(sub_model, roles):
                         # TODO apply "item" logic, and tests
                         sub_item = init_item(sub_model, dn)
-                        yield list_nodes(sub_model, dn+("item",), result)
+                        yield list_nodes(sub_model, new_dn(dn, "item"), result)
 
             # list contains multiple single items
             elif "items" in model:
@@ -655,7 +676,7 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                             sub_item = init_item(sub_model, dn)
                             storage["context_data"] = result
                             result_i = gather_item(sub_model, dn, storage=storage)
-                            yield list_nodes(sub_model, dn+("item",), result_i)
+                            yield list_nodes(sub_model, new_dn(dn, "item",), result_i)
 
             # list contains dict
             elif "nested" in model:
@@ -666,6 +687,7 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                             yield from list_nodes(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
             # return default or initil item
             else:
+                print("should not happen")
                 pass
 
     else:
