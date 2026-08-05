@@ -5,11 +5,14 @@ from semantic_model import dsm_looper
 
 
 def get_color(item):
+    """Pick a Graphviz colour for a DN by its depth (length)."""
     n = len(item)
     return COLORS[n % len(COLORS)]
 
 
-class Node():
+class Node:
+    """A node in the rendered model tree (one per DN)."""
+
     DN = {}
     head = None
 
@@ -31,21 +34,23 @@ class Node():
         return cls.head.loop()
 
     def loop(self):
-        print('-'.join(self.dn), self.val)
+        """Debug helper: print this node and its descendants."""
+        print("-".join(self.dn), self.val)
         for n in self.nodes:
             n.loop()
         print()
 
+
 LABELS = {}
 COLORS = [
-         "black",
-         "red",
-         "green",
-         "yellow",
-         "blue",
-         "purple",
-         "pink",
-         ]
+    "black",
+    "red",
+    "green",
+    "yellow",
+    "blue",
+    "purple",
+    "pink",
+]
 DN = []
 
 
@@ -55,18 +60,19 @@ def get_color(item):
 
 
 def load_dns(model, dn):
+    """``dsm_looper`` callback: collect every visited DN into ``DN``."""
     if len(dn) >= 1:
         DN.append(dn)
     return model
 
 
 if __name__ == "__main__":
-    filename = sys.argv[sys.argv.index('-f')+1] if '-f' in sys.argv else None
+    filename = sys.argv[sys.argv.index("-f") + 1] if "-f" in sys.argv else None
     if filename is not None:
         dsm_model = json.load(open("example/example_file.json"))
     else:
         data = sys.stdin.read()
-        #data = input()
+        # data = input()
         dsm_model = json.loads(data)
 
     result = dsm_looper(load_dns, dsm_model)
@@ -74,8 +80,8 @@ if __name__ == "__main__":
     print("digraph G {")
     print("rankdir=LR;")
     print(f'node [shape=rectangle width=3 fontname="{font}"];')
-    print(f'graph [fontname = "{font}"]');
-    print(f'edge [fontname = "{font}"]');
+    print(f'graph [fontname = "{font}"]')
+    print(f'edge [fontname = "{font}"]')
     node = Node("dsm_model", "()")
     Node.head = node
     print("DN:", DN)
@@ -101,4 +107,3 @@ if __name__ == "__main__":
         SEEN.add(parent_dn)
 
     print("}")
-

@@ -5,13 +5,13 @@ from settipy import settipy
 
 from semantic_model import dsm_looper
 
-
 DN = []
 DN_TO_MODEL = {}
 PARENTS = {}
 
 
 TYPE_TO_DJANGO = {
+    # Maps a DSM ``type``/``field_type`` to a Django model field class.
     "string": "CharField",
     "integer": "IntegerField",
     "int": "IntegerField",
@@ -27,11 +27,17 @@ TYPE_TO_DJANGO = {
 
 
 def type_to_django(model):
+    """Return the Django field class for ``model`` (``type_field`` or ``type``)."""
     type_ = model.get("type_field") or model.get("type")
     return TYPE_TO_DJANGO[type_]
 
 
 def load_dns(model, dn):
+    """``dsm_looper`` callback: record every visited DN and its model.
+
+    ``dict``/``list`` nodes are also stored in ``PARENTS`` (they become model
+    classes); leaves stay only in ``DN`` (they become fields).
+    """
     if len(dn) >= 1:
         DN.append(dn)
         DN_TO_MODEL[dn] = model
@@ -41,16 +47,19 @@ def load_dns(model, dn):
 
 
 def create_parameters(dn):
+    """Return Django field kwargs: ``primary_key=True`` for ``id``, else width."""
     if dn[-1] == "id":
         return "primary_key=True"
     return "max_length=256" if DN_TO_MODEL[dn].get("type") == "string" else ""
 
 
 def create_field(dn):
+    """Emit one ``    name = models.<Field>(...) # dsm_type`` line for a leaf."""
     return f"    {dn[-1]} = models.{type_to_django(DN_TO_MODEL[dn])}({create_parameters(dn)})  # {DN_TO_MODEL[dn]['type']}"
 
 
 def create_admin_file(result):
+    """Build ``admin.py``: import each model and ``admin.site.register`` it."""
     lines = []
     lines.append("from django.contrib import admin")
     lines.append("")
@@ -66,6 +75,7 @@ def create_admin_file(result):
 
 
 def create_model_file(result):
+    """Build ``models.py``: one ``class <Node>(models.Model)`` per parent DN."""
     lines = []
     lines.append("from django.db import models")
 
@@ -80,6 +90,7 @@ def create_model_file(result):
 
 
 def create_serializer_file(result):
+    """Build ``serializers.py``: a DRF ``HyperlinkedModelSerializer`` per model."""
     lines = []
     lines.append("from .models import *")
     lines.append("from rest_framework import serializers")
@@ -93,7 +104,9 @@ def create_serializer_file(result):
                 lines.append("")
             lines.append("")
             lines.append("")
-            lines.append(f"class {dn[-1]}Serializer(serializers.HyperlinkedModelSerializer):")
+            lines.append(
+                f"class {dn[-1]}Serializer(serializers.HyperlinkedModelSerializer):"
+            )
             lines.append("    class Meta:")
             lines.append(f"        model = {dn[-1]}")
             lines.append("        fields = [")
@@ -109,6 +122,7 @@ def create_serializer_file(result):
 
 
 def create_views_file(result):
+    """Build ``views.py``: a ``ModelViewSet`` per model."""
     lines = []
     lines.append("from django.contrib import admin")
     lines.append("from rest_framework import viewsets")
@@ -131,6 +145,7 @@ def create_views_file(result):
 
 
 def create_urls_file(results):
+    """Build ``urls.py``: register every viewset in a DRF ``DefaultRouter``."""
     lines = []
     lines.append("from django.urls import include, path")
     lines.append("from rest_framework import routers")
@@ -146,7 +161,9 @@ def create_urls_file(results):
     lines.append("")
     lines.append("urlpatterns = [")
     lines.append("    path('', include(router.urls)),")
-    lines.append("    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))")
+    lines.append(
+        "    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))"
+    )
     lines.append("]")
 
     return lines
@@ -156,12 +173,16 @@ if __name__ == "__main__":
     MODE = {
         "admin": create_admin_file,
         "model": create_model_file,
-
         "urls": create_urls_file,
         "serializer": create_serializer_file,
         "views": create_views_file,
     }
-    settipy.set("mode", "model", f"set the mode options: {list(MODE.keys())}", options=list(MODE.keys()))
+    settipy.set(
+        "mode",
+        "model",
+        f"set the mode options: {list(MODE.keys())}",
+        options=list(MODE.keys()),
+    )
     settipy.set("input", "", "path to input json file. example: ./example.json")
     settipy.parse()
 
