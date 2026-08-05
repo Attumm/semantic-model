@@ -1,19 +1,24 @@
-import re
-import json
-import uuid
 import datetime
+import json
+import re
+import uuid
 
 from settipy import settipy
-
 
 DEBUG_MODE = False
 
 
+# Per-run data store. ``input`` holds named input payloads passed via the
+# ``run_*(..., **input_data)`` kwargs; ``context_data`` is the scratch slot used
+# while iterating list items. ``KEY_STORAGE_LIST_ITEM`` holds the merged "common"
+# metadata row shared by every list-item view.
 STORAGE = {
-    "input": {}, "context_data": {},
+    "input": {},
+    "context_data": {},
 }
 
 
+# Maps a model ``type`` to the Python type used to materialise results.
 ITEMS = {
     "dict": dict,
     "list": list,
@@ -23,6 +28,7 @@ ITEMS = {
 }
 
 
+# Structural types that ``init_item`` knows how to instantiate on demand.
 DEFAULT_TYPE = {
     "dict": dict,
     "list": list,
@@ -31,14 +37,21 @@ DEFAULT_TYPE = {
 
 
 class BaseDSMException(Exception):
-    pass
+    """Base class for all semantic-model errors."""
 
 
 class InvalidModel(BaseDSMException):
-    pass
+    """Raised when a DSM model is malformed or cannot be run.
+
+    Covers missing ``type``, missing/unknown ``source.type``, unknown
+    ``postformat.type``, a missing ``dn`` on a source, and a ``json_key_item``
+    lookup that has no value and no ``default``.
+    """
 
 
 # defined types
+# Reserved key names used throughout a DSM model. Centralising them avoids
+# typos and keeps the model schema self-documenting.
 KEY_FIELD_TYPE = "field_type"
 KEY_TYPE = "type"
 KEY_DEFAULT = "default"
@@ -55,11 +68,14 @@ KEY_STORAGE_LIST_ITEM = "__global_list_item"
 STORAGE[KEY_STORAGE_LIST_ITEM] = {}
 
 
-def prepare_model_for_run(model, roles=None):
-    pass
-
-
 def run_with_json(action, model_path, roles=None, **input_path):
+    """Load a model + named input JSON files and dispatch to an action.
+
+    ``action`` is one of ``ACTIONS`` (``detail``/``list``/``node``).
+    ``input_path`` maps storage names to JSON file paths, e.g.
+    ``run_with_json('detail', 'sm.json', input='data.json')``.
+    Raises ``ValueError`` for an unknown action.
+    """
     dsm_model = json.load(open(model_path))
     input_data = {k: json.load(open(v)) for k, v in input_path.items()}
 
@@ -72,18 +88,27 @@ def run_with_json(action, model_path, roles=None, **input_path):
 
 
 def run_detail_json(model_path, roles=None, **input_path):
+    """Load model+input files and run the ``detail`` action (nested output)."""
     return run_with_json("detail", model_path, roles=None, **input_path)
 
 
 def run_list_json(model_path, roles=None, **input_path):
+    """Load model+input files and run the ``list`` action (flat rows)."""
     return run_with_json("list", model_path, roles=None, **input_path)
 
 
 def run_node_json(model_path, roles=None, **input_path):
+    """Load model+input files and run the ``node`` action (metadata rows)."""
     return run_with_json("node", model_path, roles=None, **input_path)
 
 
 def run_detail(model, roles=None, **input_data):
+    """Run the ``detail`` action: return the fully nested object for ``model``.
+
+    ``input_data`` is stored in ``STORAGE['input']`` under each kwarg name and
+    made available to ``source`` blocks by that name. ``roles`` filters the
+    output through RBAC (see :func:`has_read_rights`).
+    """
     # setup connection to database
     # setup api credential
     for k, v in input_data.items():
@@ -93,6 +118,12 @@ def run_detail(model, roles=None, **input_data):
 
 
 def get_data(gather_args, model, dn_parent, storage):
+    """Resolve which named data store a source reads from.
+
+    Returns ``storage['context_data']`` when the source declares no ``source``
+    key (i.e. it reads the current row-in-flight), otherwise
+    ``storage['input'][source]``.
+    """
     if KEY_GATHER not in gather_args:
         data = storage["context_data"]
     else:
@@ -101,6 +132,11 @@ def get_data(gather_args, model, dn_parent, storage):
 
 
 def json_key(gather_args, model, dn_parent, storage):
+    """Read a key from a named data store.
+
+    With ``multi: true`` it yields each element at that key (a list source);
+    otherwise it returns the value, or ``default`` when the key is absent.
+    """
     data = get_data(gather_args, model, dn_parent, storage)
     if gather_args["dn"] not in data:
         return gather_args.get("default")
@@ -112,16 +148,24 @@ def json_key(gather_args, model, dn_parent, storage):
 
 
 def json_key_item(gather_args, model, dn_parent, storage):
+    """Read a single required key.
+
+    Raises :class:`InvalidModel` if the key is missing and no ``default`` is
+    provided — this is the strict variant of :func:`json_key`.
+    """
     data = get_data(gather_args, model, dn_parent, storage)
     try:
         return data[gather_args["dn"]]
     except KeyError:
         if "default" in gather_args:
             return gather_args.get("default")
-        raise InvalidModel(f"Missing data and default for source {model['source']['type']} with dn {dn_parent}")
+        raise InvalidModel(
+            f"Missing data and default for source {model['source']['type']} with dn {dn_parent}"
+        )
 
 
 def dn_lookup_loop(gather_args, model, dn_parent, storage):
+    """Resolve a dot-path ``dn`` and yield each element at that location."""
     dn = gather_args["dn"]
 
     data = get_data(gather_args, model, dn_parent, storage)
@@ -130,6 +174,11 @@ def dn_lookup_loop(gather_args, model, dn_parent, storage):
 
 
 def dn_lookup(gather_args, model, dn_parent, storage):
+    """Resolve a dot-path ``dn`` (e.g. ``a.b.c``) and return the value.
+
+    Returns ``[]`` if any segment is missing. For list-indexed segments use
+    the ``[i]`` syntax handled by :func:`get_by_dn`.
+    """
     data = get_data(gather_args, model, dn_parent, storage)
     current_pointer = data
     for item in gather_args["dn"].split("."):
@@ -147,7 +196,9 @@ def get_from_source(gather_args, model, dn_parent, storage):
     try:
         dn = gather_args.get("path_to_target") or gather_args["dn"]
     except KeyError:
-        raise InvalidModel(f"Missing 'dn' in source  {model['source']['type']} with dn: {dn_parent}")
+        raise InvalidModel(
+            f"Missing 'dn' in source  {model['source']['type']} with dn: {dn_parent}"
+        )
     found, result = get_by_dn(data, dn)
     if found:
         return result
@@ -155,6 +206,7 @@ def get_from_source(gather_args, model, dn_parent, storage):
 
 
 def key_lookup(gather_args, model, dn_parent, storage):
+    """Look up a ``key``/``dn`` in ``context_data`` or a named input store."""
     key = gather_args.get("key") or gather_args.get("dn")
     if KEY_GATHER not in gather_args:
         return storage["context_data"].get(key)  # TODO set better debugging
@@ -163,26 +215,35 @@ def key_lookup(gather_args, model, dn_parent, storage):
 
 
 def loop_over(gather_args, model, dn_parent, storage):
+    """Yield every element of the source data."""
     data = get_data(gather_args, model, dn_parent, storage)
     yield from data
 
 
 def index(gather_args, model, dn_parent, storage):
+    """Return the element at ``source[index]`` (positional list pick)."""
     data = get_data(gather_args, model, dn_parent, storage)
     return data[gather_args["index"]]
 
 
 def is_list_dn(item):
+    """True if a DN segment denotes a list index, e.g. ``"[0]"``."""
     return item[0] == "[" and item[-1] == "]"
 
 
 def get_index_num_from_list_dn(item):
+    """Return the integer index encoded in a ``[i]`` DN segment."""
     if len(item) == 2:
         return 0
-    return int(item[1:item.find("]")])
+    return int(item[1 : item.find("]")])
 
 
 def get_by_dn(data_source, dn):
+    """Resolve a dot-separated DN against ``data_source``.
+
+    Supports ``[i]`` list-index segments. Returns ``(found, value)``;
+    ``found`` is ``False`` (with an empty value) when any step is missing.
+    """
     found = True
     index = data_source
     try:
@@ -199,6 +260,7 @@ def get_by_dn(data_source, dn):
 
 
 def yield_by_dn(data_source, dn):
+    """Yield each element located at ``dn`` (or nothing if not found)."""
     found, index = get_by_dn(data_source, dn)
     if found:
         yield from index
@@ -207,6 +269,12 @@ def yield_by_dn(data_source, dn):
 
 
 def iter_by_key(gather_args, model, dn_parent, storage):
+    """N(1) join across a list of dicts keyed by ``key``.
+
+    Reads ``dn_to_ids`` and ``dn_to_values`` from the source, then for each id
+    yields ``{item: value_for_id, ...}`` for every item. Optional
+    ``dn_data_source`` narrows the data first.
+    """
     # setup args
     dn_data_source = gather_args.get("dn_data_source")
     key = gather_args["key"]
@@ -238,6 +306,7 @@ def iter_by_key(gather_args, model, dn_parent, storage):
 
 
 def iter_by_prop(gather_args, model, dn_parent, storage):
+    """Join list-of-lists by an id DN, yielding ``{...fields, "id": index}``."""
     # setup args
     dn_data_source = gather_args.get("dn_data_source")
     dn_to_id = gather_args["dn_to_id"]
@@ -266,6 +335,7 @@ def iter_by_prop(gather_args, model, dn_parent, storage):
 
 
 def generate_informations(index):
+    """Build a ``(source, group)`` label from a dotted DN for :func:`iter_by_prop2`."""
     all_values = index.split(".")
     group = ".".join(all_values[2:6])
     source = ".".join(all_values[7:11])
@@ -273,6 +343,7 @@ def generate_informations(index):
 
 
 def iter_by_prop2(gather_args, model, dn_parent, storage):
+    """Like :func:`iter_by_prop` but with a generated ``(source, group)`` id."""
     # setup args
     dn_data_source = gather_args.get("dn_data_source")
     dn_to_id = gather_args["dn_to_id"]
@@ -301,16 +372,21 @@ def iter_by_prop2(gather_args, model, dn_parent, storage):
 
 
 def return_value(gather_args, model, dn_parent, storage):
+    """Return a literal ``value`` from the source definition."""
     return gather_args["value"]
 
 
 def yield_from(gather_args, model, dn_parent, storage):
+    """Yield from ``context_data`` (optionally at ``index``)."""
     if "index" in gather_args:
         return storage["context_data"][gather_args["index"]]
     return storage["context_data"]
 
 
 SOURCE_FUNC = {
+    # Registry of every ``source.type`` handler. ``get_func_args_from_source``
+    # resolves the gather function through this table; extend it to add custom
+    # source types (see README → Extending).
     "json_key": json_key,
     "json_key_item": json_key_item,
     "dn_lookup": dn_lookup,
@@ -329,22 +405,28 @@ SOURCE_FUNC = {
 
 
 def always_false(*args, **kwargs):
+    """Filter predicate that rejects nothing (the default ``filter_type``)."""
     return False
 
 
 def dict_key_is_empty(item, key):
+    """Filter predicate: True when ``item[key]`` is falsy/missing."""
     return not bool(item.get(key))
 
 
 def contains(item, arg):
+    """Filter predicate: True when ``arg`` is present in ``item``."""
     return arg in item
 
 
 def not_cotains(item, arg):
+    """Filter predicate: True when ``arg`` is absent from ``item``."""
     return arg not in item
 
 
 FILTERS = {
+    # Registry of ``filter_type`` predicates. A gathered value is kept only
+    # when its predicate returns False. ``default`` (always_false) keeps all.
     "contains": contains,
     "not_contains": not_cotains,
     "dict_key_is_empty": dict_key_is_empty,
@@ -353,10 +435,16 @@ FILTERS = {
 
 
 def default_postformat(item, **kwargs):
+    """Identity postformat: return the value unchanged."""
     return item
 
 
 def int_to_iso_timestamp(item, **kwargs):
+    """Convert a millisecond Unix timestamp to an ISO-8601 string.
+
+    Pass ``fail-silent`` to return the original value on failure instead of
+    raising.
+    """
     try:
         result = datetime.datetime.fromtimestamp(int(item) / 1e3).isoformat()
     except Exception:
@@ -368,11 +456,17 @@ def int_to_iso_timestamp(item, **kwargs):
 
 
 def regex_to_iso_timestamp(item, **kwargs):
+    """Parse ``item`` with ``kwargs['format']`` and return its ISO-8601 form."""
     re_format = kwargs.get("format")
     return datetime.datetime.strptime(item, re_format).isoformat()
 
 
 def regex_search(item, **kwargs):
+    """Return ``re.search(regex, item).group(0)``, or ``default`` if no match.
+
+    The ``default`` fallback makes this a coercive validator: non-matching
+    values are replaced rather than dropped.
+    """
     regex = kwargs.get("regex")
     result = re.search(regex, item)
     if result is None:
@@ -381,15 +475,19 @@ def regex_search(item, **kwargs):
 
 
 def create_uuid5(domain, id):
+    """Deterministic UUID-5 for ``(domain, id)`` (namespace padded to 16 bytes)."""
     namespace = uuid.UUID(bytes=bytes(f"{domain}".ljust(16, "o").encode("ASCII")))
     return str(uuid.uuid5(namespace, id))
 
 
 def format_dict_to_key_list(item, **kwargs):
+    """Postformat: turn a dict into the list of its keys."""
     return [key for key in item.keys()]
 
 
 POSTFORMAT = {
+    # Registry of ``postformat.type`` handlers applied after gathering. Extend
+    # it to add custom transforms (see README → Extending).
     "default": default_postformat,
     "int_to_iso_timestamp": int_to_iso_timestamp,
     "regex_to_iso_timestamp": regex_to_iso_timestamp,
@@ -400,6 +498,13 @@ POSTFORMAT = {
 
 
 def get_func_args_from_source(source, dn):
+    """Resolve all dispatch tables for a ``source`` block.
+
+    Returns ``(gather_func, filter_func, gather_args, filter_args,
+    postformat_func, postformat_args)``. Raises :class:`InvalidModel` for a
+    missing/unknown ``source.type`` or ``postformat.type`` — this is the main
+    structural-validation point for source definitions.
+    """
     try:
         source_type = source["type"]
     except KeyError:
@@ -408,10 +513,14 @@ def get_func_args_from_source(source, dn):
     try:
         source_func = SOURCE_FUNC[source_type]
     except KeyError:
-        raise InvalidModel(f"Missing source function on {source_type} on source with dn {dn}")
+        raise InvalidModel(
+            f"Missing source function on {source_type} on source with dn {dn}"
+        )
 
     try:
-        filter_func = FILTERS.get(source.get("filter_type", "default"))  # TODO fail when filter is not present
+        filter_func = FILTERS.get(
+            source.get("filter_type", "default")
+        )  # TODO fail when filter is not present
     except KeyError:
         raise InvalidModel(f"Missing filter on {source_type} on source with dn {dn}")
 
@@ -426,10 +535,23 @@ def get_func_args_from_source(source, dn):
             f"Missing post_format on {source_type} on source with dn {dn}, {postformat_name} not in available options {POSTFORMAT.keys()}"
         )
 
-    return source_func, filter_func, {k: v for k, v in source.items() if k != "type" or k.startswith("filter_")}, source.get("filter_args", {}), postformat_func, postformat_args
+    return (
+        source_func,
+        filter_func,
+        {k: v for k, v in source.items() if k != "type" or k.startswith("filter_")},
+        source.get("filter_args", {}),
+        postformat_func,
+        postformat_args,
+    )
 
 
 def gather_items(model, dn, storage):
+    """Yield postformatted, filtered values for a multi-value ``source``.
+
+    Each gathered item is dropped when its ``filter_type`` predicate is true,
+    then passed through its ``postformat`` transform. Wraps errors as
+    :class:`InvalidModel`.
+    """
     try:
         source = model[KEY_GATHER]
     except KeyError:
@@ -437,8 +559,17 @@ def gather_items(model, dn, storage):
         return []
 
     try:
-        gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
-        for item in gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage):
+        (
+            gather_func,
+            filter_func,
+            gather_args,
+            filter_args,
+            postformat_func,
+            postformat_args,
+        ) = get_func_args_from_source(source, dn)
+        for item in gather_func(
+            gather_args=gather_args, model=model, dn_parent=dn, storage=storage
+        ):
             if not filter_func(item, **filter_args):
                 yield postformat_func(item, **postformat_args)
 
@@ -447,16 +578,30 @@ def gather_items(model, dn, storage):
 
 
 def gather_item(model, dn, storage):
+    """Gather and postformat a single value (non-iterable sources).
+
+    Unlike :func:`gather_items` this returns one value rather than yielding.
+    """
     try:
         source = model[KEY_GATHER]
     except KeyError:
         raise InvalidModel(f"Missing 'source' on dn {dn}")
-    gather_func, filter_func, gather_args, filter_args, postformat_func, postformat_args = get_func_args_from_source(source, dn)
-    result = gather_func(gather_args=gather_args, model=model, dn_parent=dn, storage=storage)
+    (
+        gather_func,
+        filter_func,
+        gather_args,
+        filter_args,
+        postformat_func,
+        postformat_args,
+    ) = get_func_args_from_source(source, dn)
+    result = gather_func(
+        gather_args=gather_args, model=model, dn_parent=dn, storage=storage
+    )
     return postformat_func(result, **postformat_args)
 
 
 def get_item_type(model, dn):
+    """Return ``model['type']`` or raise :class:`InvalidModel` (validation)."""
     try:
         return model["type"]
     except KeyError:
@@ -466,12 +611,17 @@ def get_item_type(model, dn):
 
 
 def init_item(model, dn):
+    """Instantiate the empty container for ``model['type']`` (dict/list/...)."""
     item_type = get_item_type(model, dn)
     item = DEFAULT_TYPE.get(item_type, lambda: None)()
     return item
 
 
 def has_read_rights(model, roles):
+    """RBAC check: True if any of ``roles`` has ``read`` on ``model``.
+
+    When ``roles`` is ``None`` access control is disabled (everything visible).
+    """
     if roles is None:
         return True
 
@@ -480,10 +630,18 @@ def has_read_rights(model, roles):
 
 
 def new_dn(dn, key):
+    """Append ``key`` to DN tuple ``dn`` (returns a new tuple)."""
     return dn + (key,)
 
 
 def full_detail(model, dn=(), context_data=None, roles=None, storage=None):
+    """Build the fully nested ``detail`` object for ``model``.
+
+    Recurses through ``dict`` -> ``nested``, and the three ``list`` shapes
+    (``item`` / ``items`` / ``nested``). Each visited node is gated by
+    :func:`has_read_rights`; ``skip`` nodes are omitted; leaves are gathered via
+    :func:`gather_item` / :func:`gather_items`.
+    """
     item = init_item(model, dn)
 
     if model["type"] == "dict":
@@ -491,7 +649,9 @@ def full_detail(model, dn=(), context_data=None, roles=None, storage=None):
             if sub_model.get("skip"):
                 continue
             if has_read_rights(sub_model, roles):
-                item[key] = full_detail(sub_model, new_dn(dn, key), roles=roles, storage=storage)
+                item[key] = full_detail(
+                    sub_model, new_dn(dn, key), roles=roles, storage=storage
+                )
 
     elif model["type"] == "list":
         if "item" in model:
@@ -523,7 +683,9 @@ def full_detail(model, dn=(), context_data=None, roles=None, storage=None):
                 for key, sub_model in model["nested"].items():
                     if has_read_rights(sub_model, roles):
                         storage["context_data"] = partial_result
-                        sub_item[key] = full_detail(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
+                        sub_item[key] = full_detail(
+                            sub_model, new_dn(dn, key), roles=roles, storage=storage
+                        )
                 item.append(sub_item)
         # item of default
         else:
@@ -535,6 +697,7 @@ def full_detail(model, dn=(), context_data=None, roles=None, storage=None):
 
 
 def list_item(model, dn, value):
+    """Build one ``list``-action row: value + metadata + shared common fields."""
     item = {
         "value": value,
         "dn": dn,
@@ -549,9 +712,15 @@ def list_item(model, dn, value):
 
 
 def create_meta_data_list(model, dn, key, value):
+    """Build the per-column metadata for a ``node``-action row.
+
+    Emits ``<key>``, ``_<key>_dn``, ``_<key>_type`` (plus ``_<key>_field_type``
+    and ``_<key>_description`` when present) and one ``_<key>_rbac_<action>``
+    list per RBAC action listing the roles that hold it.
+    """
     meta_data = {
         key: value,
-        f"_{key}_dn": dn,
+        f"_{key}_dn": list(dn),
         # f"_{key}_title": model.get("title"),
         f"_{key}_type": model["type"],
     }
@@ -562,41 +731,60 @@ def create_meta_data_list(model, dn, key, value):
 
     rbac = model.get("rbac")
     if rbac is not None:
-        meta_data[f"_{key}_rbac_create"] = [group for group, policies in rbac.items() if policies.get("create")]
-        meta_data[f"_{key}_rbac_read"] = [group for group, policies in rbac.items() if policies.get("read")]
-        meta_data[f"_{key}_rbac_update"] = [group for group, policies in rbac.items() if policies.get("update")]
-        meta_data[f"_{key}_rbac_delete"] = [group for group, policies in rbac.items() if policies.get("delete")]
+        meta_data[f"_{key}_rbac_create"] = [
+            group for group, policies in rbac.items() if policies.get("create")
+        ]
+        meta_data[f"_{key}_rbac_read"] = [
+            group for group, policies in rbac.items() if policies.get("read")
+        ]
+        meta_data[f"_{key}_rbac_update"] = [
+            group for group, policies in rbac.items() if policies.get("update")
+        ]
+        meta_data[f"_{key}_rbac_delete"] = [
+            group for group, policies in rbac.items() if policies.get("delete")
+        ]
 
     return meta_data
 
 
 def list_node(model, dn, value):
-    item = {"_dn": dn, "__columns": []}
+    """Build one ``node``-action row: ``_dn`` + ``__columns`` + per-column meta.
+
+    For dict values it expands each key with :func:`create_meta_data_list`;
+    for scalar values it emits a single ``"value"`` column.
+    """
+    item = {"_dn": list(dn), "__columns": []}
     item.update(STORAGE[KEY_STORAGE_LIST_ITEM])
     if isinstance(value, dict):
         for key, loop_value in value.items():
-            nested_value = create_meta_data_list(model["nested"][key], new_dn(dn, key), key, loop_value)
+            nested_value = create_meta_data_list(
+                model["nested"][key], new_dn(dn, key), key, loop_value
+            )
             item.update(nested_value)
             item["__columns"].append(key)
     else:
         meta_item = create_meta_data_list(model, dn, "value", value)
-        meta_item["__columns"] = ["value",]
+        meta_item["__columns"] = [
+            "value",
+        ]
 
         item.update(meta_item)
     return item
 
 
 def list_items(model, dn=(), context_data=None, roles=None, storage=None):
+    """Yield ``list``-action rows by walking ``model`` (one row per leaf)."""
     item = init_item(model, dn)
     if model["type"] == "dict":
         for key, sub_model in model["nested"].items():
             if sub_model.get("skip"):
                 continue
             if has_read_rights(sub_model, roles):
-                yield from list_items(sub_model, new_dn(dn, key), roles=roles, storage=storage)
+                yield from list_items(
+                    sub_model, new_dn(dn, key), roles=roles, storage=storage
+                )
 
     elif model["type"] == "list":
-
         # list item contains single item
         if "item" in model:
             sub_model = model["item"]
@@ -623,7 +811,9 @@ def list_items(model, dn=(), context_data=None, roles=None, storage=None):
                 for key, sub_model in model["nested"].items():
                     if has_read_rights(sub_model, roles):
                         storage["context_data"] = partial_result
-                        yield from list_items(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
+                        yield from list_items(
+                            sub_model, new_dn(dn, key), roles=roles, storage=storage
+                        )
         # return default or initil item
         else:
             yield item
@@ -634,10 +824,14 @@ def list_items(model, dn=(), context_data=None, roles=None, storage=None):
 
 
 def is_node(model):
-    return model["type"] in ["dict", "list"] and all("nested" not in sub_model for sub_model in model["nested"].values())
+    """True when a dict/list node has only leaf children (a renderable node row)."""
+    return model["type"] in ["dict", "list"] and all(
+        "nested" not in sub_model for sub_model in model["nested"].values()
+    )
 
 
 def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
+    """Yield ``node``-action rows (one per node, with column metadata)."""
     item = init_item(model, dn)
     if model["type"] == "dict":
         if is_node(model):
@@ -649,7 +843,9 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                     continue
 
                 if has_read_rights(sub_model, roles):
-                    yield from list_nodes(sub_model, new_dn(dn, key), roles=roles, storage=storage)
+                    yield from list_nodes(
+                        sub_model, new_dn(dn, key), roles=roles, storage=storage
+                    )
 
     elif model["type"] == "list":
         if is_node(model):
@@ -657,7 +853,6 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
             for item in result:
                 yield list_node(model=model, dn=dn, value=item)
         else:
-
             # list item contains single item
             if "item" in model:
                 sub_model = model["item"]
@@ -676,7 +871,14 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                             sub_item = init_item(sub_model, dn)
                             storage["context_data"] = result
                             result_i = gather_item(sub_model, dn, storage=storage)
-                            yield list_nodes(sub_model, new_dn(dn, "item",), result_i)
+                            yield list_nodes(
+                                sub_model,
+                                new_dn(
+                                    dn,
+                                    "item",
+                                ),
+                                result_i,
+                            )
 
             # list contains dict
             elif "nested" in model:
@@ -684,11 +886,12 @@ def list_nodes(model, dn=(), context_data=None, roles=None, storage=None):
                     for key, sub_model in model["nested"].items():
                         if has_read_rights(sub_model, roles):
                             storage["context_data"] = partial_result
-                            yield from list_nodes(sub_model,  new_dn(dn, key), roles=roles, storage=storage)
+                            yield from list_nodes(
+                                sub_model, new_dn(dn, key), roles=roles, storage=storage
+                            )
             # return default or initil item
             else:
                 print("should not happen")
-                pass
 
     else:
         result = gather_item(model, dn, storage=storage)
@@ -711,8 +914,12 @@ def run_list(model, roles=None, **input_data):
 
     if has_list_item_config(model):
         common_key = "common" if "common" in model.get("nested", {}) else "standard"
-        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), roles=roles, storage=STORAGE)
-        STORAGE[KEY_STORAGE_LIST_ITEM] = {f"common_{key}": val for key, val in common_fields.items()}
+        common_fields = full_detail(
+            model["nested"][common_key], dn=(common_key,), roles=roles, storage=STORAGE
+        )
+        STORAGE[KEY_STORAGE_LIST_ITEM] = {
+            f"common_{key}": val for key, val in common_fields.items()
+        }
 
     return list_items(model, roles=roles, storage=STORAGE)
 
@@ -723,14 +930,20 @@ def run_nodes(model, roles=None, **input_data):
 
     if has_list_item_config(model):
         common_key = "common" if "common" in model.get("nested", {}) else "standard"
-        common_fields = full_detail(model["nested"][common_key], dn=(common_key, ), roles=roles, storage=STORAGE)
-        STORAGE[KEY_STORAGE_LIST_ITEM] = {f"common_{key}": val for key, val in common_fields.items()}
+        common_fields = full_detail(
+            model["nested"][common_key], dn=(common_key,), roles=roles, storage=STORAGE
+        )
+        STORAGE[KEY_STORAGE_LIST_ITEM] = {
+            f"common_{key}": val for key, val in common_fields.items()
+        }
 
     return list_nodes(model, roles=roles, storage=STORAGE)
 
 
 def rbac_views(items):
-    return {i: {"read": True, "update": True, "create": True, "delete": True} for i in items}
+    return {
+        i: {"read": True, "update": True, "create": True, "delete": True} for i in items
+    }
 
 
 def update_views_to_rbac(model, dn):
@@ -765,6 +978,7 @@ def dsm_looper(run_func, dsm_model):
                 for key, sub_model in model["nested"].items():
                     loop_over(sub_model, new_dn(dn, key))
         return model
+
     return loop_over(dsm_model.copy())
 
 
@@ -788,35 +1002,41 @@ def run_semantic_nodes_model(sm_model_path, input_file):
 
 
 def explain(*args, **kwargs):
+    """Print the CLI usage cheat-sheet (``-mode help``)."""
     print("*** Explain ***\n")
     print("Create for initial model:")
-    print("python3 -m semantic_model -mode one_to_one -input example.json > sm_model.json")
-    print("")
+    print(
+        "python3 -m semantic_model -mode one_to_one -input example.json > sm_model.json"
+    )
+    print()
     print("Run model with just created model and example_data")
     print("python3 -m semantic_model -input example.json -sm sm_model.json")
-    print("")
+    print()
     print("Graph created model and create a png image")
     print("sudo docker run -i attumm/dsm_png:lastest < sm_model.json > output.png")
-    print("")
+    print()
 
 
 def pjson(result):
+    """Pretty-print ``result`` as indented JSON to stdout."""
     if result is None:
         return
     print(json.dumps(result, indent=4))
 
 
 def json_(result):
+    """Print ``result`` as compact JSON to stdout."""
     if result is None:
         return
     print(json.dumps(result))
 
 
 def tofile(result):
+    """Write ``result`` to ``output.json``."""
     if result is None:
         return
     with open("output.json", "w") as f:
-        json.dump(f, result)
+        json.dump(result, f)
 
 
 OUTPUT = {
@@ -827,6 +1047,7 @@ OUTPUT = {
 
 if __name__ == "__main__":
     from one_to_one import run_one_to_one
+
     CLI = {
         "default": run_semantic_model,
         "detail": run_semantic_model,
@@ -851,11 +1072,12 @@ if __name__ == "__main__":
     try:
         run_mode = CLI[mode]
     except KeyError:
-        print(f"{mode} not in valid mode options: {list(CLI.keys)}")
+        print(f"{mode} not in valid mode options: {list(CLI.keys())}")
+        raise SystemExit(1) from None
 
     result = run_mode(sm_model_path, input_path)
 
     try:
         OUTPUT[output](result)
     except KeyError:
-        print(f"{output} not in valid output options: {list(OUTPUT.keys)}")
+        print(f"{output} not in valid output options: {list(OUTPUT.keys())}")
