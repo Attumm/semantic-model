@@ -5,11 +5,12 @@ contract.
 These cover the "small, pure" building blocks the engine composes, locking
 their behavior so refactors stay safe.
 """
+
 import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from one_to_one import (
     CONFIG,
@@ -103,17 +104,22 @@ class TestRbac(unittest.TestCase):
         self.assertTrue(has_read_rights({"rbac": {"admin": {"read": True}}}, ["admin"]))
 
     def test_non_matching_role_cannot_read(self):
-        self.assertFalse(has_read_rights({"rbac": {"admin": {"read": True}}}, ["guest"]))
+        self.assertFalse(
+            has_read_rights({"rbac": {"admin": {"read": True}}}, ["guest"])
+        )
 
     def test_role_without_read_right_cannot_read(self):
         model = {"rbac": {"admin": {"read": False, "create": True}}}
         self.assertFalse(has_read_rights(model, ["admin"]))
 
     def test_rbac_views_grants_all_rights(self):
-        self.assertEqual(rbac_views(["admin", "user"]), {
-            "admin": {"read": True, "update": True, "create": True, "delete": True},
-            "user": {"read": True, "update": True, "create": True, "delete": True},
-        })
+        self.assertEqual(
+            rbac_views(["admin", "user"]),
+            {
+                "admin": {"read": True, "update": True, "create": True, "delete": True},
+                "user": {"read": True, "update": True, "create": True, "delete": True},
+            },
+        )
 
     def test_update_views_to_rbac_converts_views(self):
         model = {"type": "string", "views": ["admin"]}
@@ -149,10 +155,18 @@ class TestNodeMetadata(unittest.TestCase):
         self.assertEqual(meta["_name_description"], "a name")
 
     def test_rbac_lists_per_action(self):
-        model = {"type": "string", "rbac": {
-            "admin": {"read": True, "create": True, "update": False, "delete": False},
-            "user": {"read": True},
-        }}
+        model = {
+            "type": "string",
+            "rbac": {
+                "admin": {
+                    "read": True,
+                    "create": True,
+                    "update": False,
+                    "delete": False,
+                },
+                "user": {"read": True},
+            },
+        }
         meta = create_meta_data_list(model, ("p", "name"), "name", "Bob")
         self.assertEqual(meta["_name_rbac_read"], ["admin", "user"])
         self.assertEqual(meta["_name_rbac_create"], ["admin"])
@@ -167,11 +181,17 @@ class TestNodeMetadata(unittest.TestCase):
 
 class TestIsNodeAndListItemConfig(unittest.TestCase):
     def test_is_node_dict_with_only_leaves(self):
-        model = {"type": "dict", "nested": {"a": {"type": "string"}, "b": {"type": "integer"}}}
+        model = {
+            "type": "dict",
+            "nested": {"a": {"type": "string"}, "b": {"type": "integer"}},
+        }
         self.assertTrue(is_node(model))
 
     def test_is_node_false_when_nested_child(self):
-        model = {"type": "dict", "nested": {"a": {"type": "dict", "nested": {"x": {"type": "string"}}}}}
+        model = {
+            "type": "dict",
+            "nested": {"a": {"type": "dict", "nested": {"x": {"type": "string"}}}},
+        }
         self.assertFalse(is_node(model))
 
     def test_list_item_config_returns_list_item_when_present(self):
@@ -183,10 +203,14 @@ class TestIsNodeAndListItemConfig(unittest.TestCase):
         self.assertIs(list_item_config(model, ()), model)
 
     def test_has_list_item_config_standard(self):
-        self.assertTrue(has_list_item_config({"nested": {"standard": {"type": "string"}}}))
+        self.assertTrue(
+            has_list_item_config({"nested": {"standard": {"type": "string"}}})
+        )
 
     def test_has_list_item_config_common(self):
-        self.assertTrue(has_list_item_config({"nested": {"common": {"type": "string"}}}))
+        self.assertTrue(
+            has_list_item_config({"nested": {"common": {"type": "string"}}})
+        )
 
     def test_has_list_item_config_absent(self):
         self.assertFalse(has_list_item_config({"nested": {"x": {"type": "string"}}}))
@@ -229,7 +253,9 @@ class TestPostformats(unittest.TestCase):
             int_to_iso_timestamp("notanumber")
 
     def test_int_to_iso_timestamp_fail_silent(self):
-        self.assertEqual(int_to_iso_timestamp("notanumber", **{"fail-silent": True}), "notanumber")
+        self.assertEqual(
+            int_to_iso_timestamp("notanumber", **{"fail-silent": True}), "notanumber"
+        )
 
     def test_regex_to_iso_timestamp(self):
         result = regex_to_iso_timestamp("20200629_105645", format="%Y%m%d_%H%M%S")
@@ -248,7 +274,9 @@ class TestPostformats(unittest.TestCase):
         self.assertEqual(create_uuid5("domain", "id1"), create_uuid5("domain", "id1"))
 
     def test_create_uuid5_differs_for_different_inputs(self):
-        self.assertNotEqual(create_uuid5("domain", "id1"), create_uuid5("domain", "id2"))
+        self.assertNotEqual(
+            create_uuid5("domain", "id1"), create_uuid5("domain", "id2")
+        )
 
     def test_format_dict_to_key_list(self):
         self.assertEqual(format_dict_to_key_list({"a": 1, "b": 2}), ["a", "b"])
@@ -261,9 +289,19 @@ class TestNodeDnContract(unittest.TestCase):
         model = {
             "type": "dict",
             "nested": {
-                "person": {"type": "dict", "nested": {
-                    "name": {"type": "string", "source": {"type": "json_key_item", "source": "input", "dn": "NAME"}},
-                }},
+                "person": {
+                    "type": "dict",
+                    "nested": {
+                        "name": {
+                            "type": "string",
+                            "source": {
+                                "type": "json_key_item",
+                                "source": "input",
+                                "dn": "NAME",
+                            },
+                        },
+                    },
+                },
             },
         }
         rows = list(run_nodes(model, input={"NAME": "Bob"}))
@@ -284,10 +322,14 @@ class TestOneToOnePrimitives(unittest.TestCase):
         self.assertEqual(identify("bob@example.com"), "Email Address")
 
     def test_identify_ipv4(self):
-        self.assertEqual(identify("172.0.0.1"), "Internet Protocol (IP) Address Version 4")
+        self.assertEqual(
+            identify("172.0.0.1"), "Internet Protocol (IP) Address Version 4"
+        )
 
     def test_identify_url(self):
-        self.assertEqual(identify("https://example.com"), "Uniform Resource Locator (URL)")
+        self.assertEqual(
+            identify("https://example.com"), "Uniform Resource Locator (URL)"
+        )
 
     def test_identify_phone(self):
         self.assertEqual(identify("+1 555 123 4567"), "Phone Number")
@@ -350,6 +392,7 @@ class TestEndToEndBootstrapAndRun(unittest.TestCase):
 
     def test_bootstrap_model_runs_detail(self):
         from one_to_one import one_to_one_looper
+
         CONFIG.clear()
         CONFIG["skip_description"] = True
         try:

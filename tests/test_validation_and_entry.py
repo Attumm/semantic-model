@@ -5,6 +5,7 @@ These harden the "validate the model" feature: the engine raises
 malformed, and the JSON-file helpers (the path real users take) must behave the
 same as their in-memory counterparts.
 """
+
 import contextlib
 import io
 import json
@@ -13,7 +14,7 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from semantic_model import (
     BaseDSMException,
@@ -34,7 +35,10 @@ from semantic_model import (
 SIMPLE_MODEL = {
     "type": "dict",
     "nested": {
-        "name": {"type": "string", "source": {"type": "json_key_item", "source": "input", "dn": "NAME"}},
+        "name": {
+            "type": "string",
+            "source": {"type": "json_key_item", "source": "input", "dn": "NAME"},
+        },
     },
 }
 SIMPLE_INPUT = {"NAME": "Bob"}
@@ -76,17 +80,25 @@ class TestValidationErrors(unittest.TestCase):
     def test_unknown_source_type(self):
         with self.assertRaises(InvalidModel):
             run_detail(
-                {"type": "string", "source": {"type": "bogus", "source": "input", "dn": "x"}},
+                {
+                    "type": "string",
+                    "source": {"type": "bogus", "source": "input", "dn": "x"},
+                },
                 input={},
             )
 
     def test_unknown_postformat(self):
         with self.assertRaises(InvalidModel):
             run_detail(
-                {"type": "string", "source": {
-                    "type": "json_key_item", "source": "input", "dn": "x",
-                    "postformat": {"type": "bogus"},
-                }},
+                {
+                    "type": "string",
+                    "source": {
+                        "type": "json_key_item",
+                        "source": "input",
+                        "dn": "x",
+                        "postformat": {"type": "bogus"},
+                    },
+                },
                 input={"x": "v"},
             )
 
@@ -94,13 +106,28 @@ class TestValidationErrors(unittest.TestCase):
         # the strict variant of json_key: no value and no default -> InvalidModel
         with self.assertRaises(InvalidModel):
             run_detail(
-                {"type": "string", "source": {"type": "json_key_item", "source": "input", "dn": "missing"}},
+                {
+                    "type": "string",
+                    "source": {
+                        "type": "json_key_item",
+                        "source": "input",
+                        "dn": "missing",
+                    },
+                },
                 input={},
             )
 
     def test_json_key_item_missing_key_with_default_returns_default(self):
         result = run_detail(
-            {"type": "string", "source": {"type": "json_key_item", "source": "input", "dn": "missing", "default": "D"}},
+            {
+                "type": "string",
+                "source": {
+                    "type": "json_key_item",
+                    "source": "input",
+                    "dn": "missing",
+                    "default": "D",
+                },
+            },
             input={},
         )
         self.assertEqual(result, "D")
@@ -108,7 +135,10 @@ class TestValidationErrors(unittest.TestCase):
     def test_get_from_source_missing_dn_raises(self):
         with self.assertRaises(InvalidModel):
             run_detail(
-                {"type": "string", "source": {"type": "get_from_source", "source": "input"}},
+                {
+                    "type": "string",
+                    "source": {"type": "get_from_source", "source": "input"},
+                },
                 input={},
             )
 
@@ -130,7 +160,10 @@ class TestJsonEntryPoints(unittest.TestCase):
         self.input_path = _write(self.tmp, "i.json", SIMPLE_INPUT)
 
     def test_run_with_json_detail(self):
-        self.assertEqual(run_with_json("detail", self.model_path, input=self.input_path), {"name": "Bob"})
+        self.assertEqual(
+            run_with_json("detail", self.model_path, input=self.input_path),
+            {"name": "Bob"},
+        )
 
     def test_run_with_json_unknown_action_raises(self):
         with self.assertRaises(ValueError):
@@ -152,13 +185,19 @@ class TestJsonEntryPoints(unittest.TestCase):
         self.assertEqual(len(rows), 1)
 
     def test_run_semantic_model_alias(self):
-        self.assertEqual(run_semantic_model(self.model_path, self.input_path), {"name": "Bob"})
+        self.assertEqual(
+            run_semantic_model(self.model_path, self.input_path), {"name": "Bob"}
+        )
 
     def test_run_semantic_list_model_alias(self):
-        self.assertEqual(len(list(run_semantic_list_model(self.model_path, self.input_path))), 1)
+        self.assertEqual(
+            len(list(run_semantic_list_model(self.model_path, self.input_path))), 1
+        )
 
     def test_run_semantic_nodes_model_alias(self):
-        self.assertEqual(len(list(run_semantic_nodes_model(self.model_path, self.input_path))), 1)
+        self.assertEqual(
+            len(list(run_semantic_nodes_model(self.model_path, self.input_path))), 1
+        )
 
 
 class TestOutputHelpers(unittest.TestCase):

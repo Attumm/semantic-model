@@ -4,13 +4,14 @@ The whole point of semantic-model is that *one* model definition yields output
 for *different systems*. These tests pin the shape of the Django/DRF scaffold
 and the Graphviz digraph so the generators don't silently drift.
 """
+
 import importlib.util
 import json
 import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 
 def load_module(name, path):
@@ -111,10 +112,14 @@ class TestDjangoParameters(unittest.TestCase):
         self.dj.dsm_looper(self.dj.load_dns, json.loads(json.dumps(_person_model())))
 
     def test_id_is_primary_key(self):
-        self.assertEqual(self.dj.create_parameters(("person", "id")), "primary_key=True")
+        self.assertEqual(
+            self.dj.create_parameters(("person", "id")), "primary_key=True"
+        )
 
     def test_string_gets_max_length(self):
-        self.assertEqual(self.dj.create_parameters(("person", "name")), "max_length=256")
+        self.assertEqual(
+            self.dj.create_parameters(("person", "name")), "max_length=256"
+        )
 
 
 class TestDjangoAdminFile(DjangoGenTestBase):
@@ -131,7 +136,9 @@ class TestDjangoSerializerFile(DjangoGenTestBase):
         lines = self.dj.create_serializer_file(None)
         text = "\n".join(lines)
         self.assertIn("from rest_framework import serializers", text)
-        self.assertIn("class personSerializer(serializers.HyperlinkedModelSerializer):", text)
+        self.assertIn(
+            "class personSerializer(serializers.HyperlinkedModelSerializer):", text
+        )
         self.assertIn("model = person", text)
         # leaves are listed in the fields array
         self.assertIn("'name'", text)
@@ -179,9 +186,13 @@ class TestSmToGraph(unittest.TestCase):
         # the generator reads the model from stdin in __main__
         env = dict(os.environ, PYTHONPATH=os.pathsep.join(sys.path))
         import subprocess
+
         proc = subprocess.run(
             [sys.executable, os.path.abspath(GRAPH_PATH)],
-            input=json.dumps(model), capture_output=True, text=True, env=env,
+            input=json.dumps(model),
+            capture_output=True,
+            text=True,
+            env=env,
         )
         return proc
 
@@ -196,7 +207,9 @@ class TestSmToGraph(unittest.TestCase):
         proc = self._run(self.model)
         self.assertEqual(proc.returncode, 0, msg=proc.stderr)
         # DN line lists every visited dn; person + 2 leaves = 3 entries
-        dn_line = [line for line in proc.stdout.splitlines() if line.startswith("DN:")][0]
+        dn_line = [line for line in proc.stdout.splitlines() if line.startswith("DN:")][
+            0
+        ]
         self.assertIn("('person',)", dn_line)
         self.assertIn("('person', 'name')", dn_line)
         self.assertIn("('person', 'age')", dn_line)
